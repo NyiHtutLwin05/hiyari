@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>HIYARI — Almost is everything.</title>
+<meta name="description" content="HIYARI (ヒヤリ) — a near-miss driving game. Weave through expressway traffic; every close call is printed on the asphalt.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='28' fill='none' stroke='%23E8380D' stroke-width='5'/%3E%3Ctext x='32' y='44' font-family='sans-serif' font-weight='900' font-size='34' fill='%23E8380D' text-anchor='middle'%3E走%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<canvas id="scene" aria-hidden="true"></canvas>
+
+<!-- speed streaks: sibling of the HUD, below it, above the canvas -->
+<div id="speed-lines" aria-hidden="true"></div>
+
+<!-- ============ HUD (poster margin system) ============ -->
+<div id="hud" aria-hidden="true">
+  <div id="score-block">
+    <div id="score-digits"></div>
+    <div id="score-rule"></div>
+    <div id="score-label">PTS</div>
+  </div>
+
+  <div id="speed-block">
+    <div id="speed-plate">
+      <span id="speed-num">0</span><span id="speed-unit">km/h</span>
+    </div>
+    <div id="route-ticker"><span id="route-name">ROUTE 1 — MEISHIN</span></div>
+    <div id="overdrive-tag" lang="ja">オーバードライブ OVERDRIVE</div>
+    <div id="boost-block">
+      <div id="boost-gauge"><div id="draft-charge"></div><div id="boost-fill"></div></div>
+      <div id="boost-label">BOOST <span lang="ja">加速</span> — &#8593; &nbsp;/&nbsp; <span lang="ja">スリップ</span> DRAFT</div>
+    </div>
+  </div>
+
+  <div id="combo-stack"></div>
+  <div id="drift-live" lang="ja">ドリフト <span id="drift-live-pts">0</span></div>
+  <div id="apex-live" lang="ja">アペックス <span id="apex-live-pts">0</span></div>
+  <div id="air-trick" lang="ja"></div>
+  <div id="fever-band"><span>ヒヤリハット FEVER — POINTS ×2</span></div>
+
+  <div id="stamps"></div>
+  <div id="hint">&#8592; &#8594; STEER &nbsp;&middot;&nbsp; SHIFT — DRIFT &nbsp;&middot;&nbsp; &#8593; — BOOST &nbsp;&middot;&nbsp; TUCK IN — DRAFT &nbsp;&middot;&nbsp; RAMP → AIR: &#8592;&#8594; ROLL / &#8593; FLIP / SHIFT SPIN</div>
+</div>
+
+<button id="boost-btn" type="button" aria-label="Hold to boost"><span lang="ja">加速</span></button>
+
+<div id="ink-flash"></div>
+<div id="wipe"></div>
+
+<!-- ============ INTRO POSTER ============ -->
+<section id="intro">
+  <div id="intro-top">
+    <div id="intro-field"></div>
+    <h1 id="title" aria-label="HIYARI">
+      <span class="tline" id="tline1"></span>
+      <span class="tline" id="tline2"></span>
+    </h1>
+    <div id="spine" lang="ja">ヒヤリハット</div>
+    <svg id="roundel" viewBox="0 0 120 120" aria-hidden="true">
+      <defs>
+        <path id="rim" d="M 60,60 m -44,0 a 44,44 0 1,1 88,0 a 44,44 0 1,1 -88,0"/>
+      </defs>
+      <circle cx="60" cy="60" r="56" class="ring-outer"/>
+      <circle cx="60" cy="60" r="34" class="ring-inner"/>
+      <text class="rim-text"><textPath href="#rim" startOffset="0%">NEAR-MISS DRIVING CLUB &#8226; ALMOST IS EVERYTHING &#8226;</textPath></text>
+      <text x="60" y="74" class="center-glyph" lang="ja">走</text>
+    </svg>
+  </div>
+  <div id="intro-bottom">
+    <div id="colophon">
+      <div id="best-run">FIRST RUN — NO RECORD YET</div>
+      <div id="start-hint">
+        <span id="start-word">HOLD TO DRIVE</span>
+        <span id="start-keys">any key / touch — keep it held</span>
+      </div>
+      <div id="ink-gauge"><div id="ink-fill"></div></div>
+      <div id="credit">A NEAR-MISS DRIVING CLUB PRODUCTION &mdash; THREE.JS + GSAP + WEBAUDIO</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CRASH STAMP ============ -->
+<div id="crash-stamp" aria-hidden="true">
+  <span id="crash-jp" lang="ja">事故</span>
+  <span id="crash-en">CRASH</span>
+</div>
+
+<!-- ============ RESULTS POSTER ============ -->
+<section id="results" aria-hidden="true">
+  <div id="results-card">
+    <header>
+      <span id="results-kicker">RUN COMPLETE</span>
+      <span id="results-jp" lang="ja">走行記録</span>
+    </header>
+    <div class="ledger">
+      <div class="row"><span class="lbl">DISTANCE</span><span class="leader"></span><span class="val" id="r-dist">0.0 km</span></div>
+      <div class="row"><span class="lbl">NEAR MISSES</span><span class="leader"></span><span class="val" id="r-miss">0</span></div>
+      <div class="row"><span class="lbl">BEST COMBO</span><span class="leader"></span><span class="val" id="r-combo">&times;1</span></div>
+      <div class="row"><span class="lbl">TOP SPEED</span><span class="leader"></span><span class="val" id="r-speed">0 km/h</span></div>
+      <div class="row"><span class="lbl">DRIFT INK</span><span class="leader"></span><span class="val" id="r-drift">0</span></div>
+      <div class="row"><span class="lbl">AIR TIME</span><span class="leader"></span><span class="val" id="r-air">0.0 s</span></div>
+      <div class="row"><span class="lbl">SLINGSHOTS</span><span class="leader"></span><span class="val" id="r-sling">0</span></div>
+      <div class="row"><span class="lbl">APEX CLEARS</span><span class="leader"></span><span class="val" id="r-apex">0</span></div>
+      <div class="row"><span class="lbl">BEST TRICK</span><span class="leader"></span><span class="val" id="r-trick">&times;1.0</span></div>
+      <div class="row"><span class="lbl">OVERDRIVE</span><span class="leader"></span><span class="val" id="r-od">0.0 s</span></div>
+      <div class="row"><span class="lbl">FEVER TIME</span><span class="leader"></span><span class="val" id="r-fever">0.0 s</span></div>
+    </div>
+    <div id="score-final-rule"></div>
+    <div id="r-score-label">SCORE</div>
+    <div id="r-score">0</div>
+    <div id="new-record" lang="ja">記録 NEW RECORD</div>
+    <button id="restart-btn" type="button">RUN IT BACK</button>
+    <div id="restart-hint">R — instant restart &nbsp;&middot;&nbsp; Enter works too</div>
+  </div>
+</section>
+
+<!-- ============ PAUSE ============ -->
+<section id="pause" aria-hidden="true">
+  <div id="pause-card">
+    <span id="pause-jp" lang="ja">中断</span>
+    <span id="pause-en">PAUSED — TAP OR PRESS P</span>
+  </div>
+</section>
+
+<div id="audio-btns">
+  <button id="music-btn" type="button" aria-label="Toggle music">MUSIC&nbsp;ON</button>
+  <button id="mute-btn" type="button" aria-label="Toggle sound">SOUND&nbsp;ON</button>
+</div>
+
+<div id="nogl" hidden>
+  <p>HIYARI needs WebGL to print its world.<br>Your browser said no. Try another one.</p>
+</div>
+
+<script src="vendor/three.min.js"></script>
+<script src="vendor/gsap.min.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/world.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

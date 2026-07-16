@@ -1,0 +1,809 @@
+/* ============================================================
+   HIYARI — poster design system
+   Ink plates: asphalt / meishin green / reflective white /
+   shu vermilion (earned or lost only) / caution yellow / route blue
+   ============================================================ */
+
+:root {
+  --ink:    #121417;
+  --green:  #00704A;
+  --paper:  #F2EFE5;
+  --shu:    #E8380D;
+  --yellow: #F7B500;
+  --blue:   #1D50C8;
+
+  --f-display: 'Anton', 'Arial Narrow', sans-serif;
+  --f-num:     'Saira Condensed', 'Arial Narrow', sans-serif;
+  --f-body:    'Barlow', 'Helvetica Neue', Helvetica, sans-serif;
+  --f-jp:      'Noto Sans JP', sans-serif;
+
+  --m: 4vmin;            /* poster margin */
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--f-body);
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+::selection { background: var(--shu); color: var(--paper); }
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+:focus { outline: none; }
+:focus-visible { outline: 3px dashed var(--yellow); outline-offset: 3px; }
+
+#scene {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+}
+
+/* ============ HUD ============ */
+
+#hud {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+#hud > * { opacity: 0; } /* typeset in via GSAP at run start */
+
+/* --- score, top-left --- */
+#score-block {
+  position: absolute;
+  top: var(--m);
+  left: var(--m);
+}
+#score-digits {
+  display: flex;
+  font-family: var(--f-num);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(56px, 8vw, 104px);
+  line-height: 1;
+  color: var(--paper);
+}
+#score-digits .slot {
+  height: 1em;
+  overflow: hidden;
+}
+#score-digits .slot.dim { opacity: 0.16; }
+#score-digits .strip { display: flex; flex-direction: column; }
+#score-digits .strip span { height: 1em; display: block; }
+#score-rule {
+  height: 3px;
+  background: var(--paper);
+  margin-top: 6px;
+  transform-origin: left center;
+}
+#score-label {
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.34em;
+  color: var(--paper);
+}
+
+/* --- speed plate, top-right --- */
+#speed-block {
+  position: absolute;
+  top: var(--m);
+  right: var(--m);
+  text-align: right;
+  perspective: 500px;
+}
+#speed-plate {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  background: var(--green);
+  border: 2px solid var(--paper);
+  box-shadow: inset 0 0 0 2px var(--green), inset 0 0 0 3px var(--paper);
+  border-radius: 8px;
+  padding: 10px 16px 8px;
+  transform-origin: top center;
+}
+#speed-num {
+  font-family: var(--f-num);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(30px, 4vw, 46px);
+  line-height: 1;
+}
+#speed-unit {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+}
+#route-ticker {
+  margin-top: 8px;
+  height: 16px;
+  overflow: hidden;
+}
+#route-name {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  color: var(--paper);
+}
+
+/* boost ink — earned by near-misses, spent holding up */
+#boost-block { margin-top: 10px; }
+#boost-gauge {
+  position: relative;
+  height: 5px;
+  width: min(17vw, 180px);
+  margin-left: auto;
+  background: color-mix(in srgb, var(--paper) 16%, transparent);
+}
+/* two stacked fills: draft (yellow) charges underneath, boost (shu) spends on top */
+#boost-fill, #draft-charge {
+  position: absolute;
+  inset: 0;
+  transform: scaleX(0);
+  transform-origin: right center;
+}
+#boost-fill  { background: var(--shu); }
+#draft-charge { background: var(--yellow); opacity: 0.85; }
+#boost-label {
+  margin-top: 5px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.26em;
+  color: color-mix(in srgb, var(--paper) 55%, transparent);
+}
+#boost-label [lang="ja"] { font-family: var(--f-jp); font-size: 9px; }
+
+/* overdrive: a text pill under the speed cluster — never colour-only.
+   absolutely placed just below the cluster so it reserves no space when idle */
+#overdrive-tag {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  padding: 4px 10px 3px;
+  background: var(--shu);
+  color: var(--paper);
+  font-family: var(--f-display);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  white-space: nowrap;
+  transform: rotate(-2deg);
+  transform-origin: right center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+#overdrive-tag [lang="ja"], #overdrive-tag:lang(ja) { font-family: var(--f-jp); }
+
+/* live drift ink counter, appears only mid-slide */
+#drift-live {
+  position: absolute;
+  left: var(--m);
+  bottom: calc(var(--m) + 118px);
+  font-family: var(--f-jp);
+  font-weight: 900;
+  font-size: clamp(15px, 2vw, 22px);
+  color: var(--shu);
+  opacity: 0;
+}
+#drift-live-pts {
+  font-family: var(--f-num);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--paper);
+}
+
+/* live apex ink, appears only mid-corner-drift (sits above drift-live) */
+#apex-live {
+  position: absolute;
+  left: var(--m);
+  bottom: calc(var(--m) + 150px);
+  font-family: var(--f-jp);
+  font-weight: 900;
+  font-size: clamp(15px, 2vw, 22px);
+  color: var(--yellow);
+  opacity: 0;
+}
+#apex-live-pts {
+  font-family: var(--f-num);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--paper);
+}
+
+/* mid-air trick readout, dead centre-top, air-only */
+#air-trick {
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  font-family: var(--f-jp);
+  font-weight: 900;
+  font-size: clamp(24px, 5vw, 60px);
+  line-height: 0.95;
+  color: var(--paper);
+  text-shadow: 4px 4px 0 var(--shu);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* --- combo stack, bottom-left --- */
+#combo-stack {
+  position: absolute;
+  left: var(--m);
+  bottom: calc(var(--m) + 34px);
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 4px;
+  width: min(34vw, 300px);
+}
+#combo-stack .stripe {
+  height: 9px;
+  transform-origin: left center;
+}
+#combo-stack .stripe:nth-child(odd)  { background: var(--shu); }
+#combo-stack .stripe:nth-child(even) { background: var(--yellow); }
+
+#fever-band {
+  position: absolute;
+  left: var(--m);
+  bottom: var(--m);
+  background: var(--shu);
+  color: var(--paper);
+  font-family: var(--f-display);
+  font-size: clamp(14px, 1.8vw, 20px);
+  letter-spacing: 0.06em;
+  padding: 6px 14px 5px;
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+/* --- near-miss stamps --- */
+#stamps { position: absolute; inset: 0; overflow: hidden; }
+.stamp {
+  position: absolute;
+  top: 38%;
+  display: flex;
+  flex-direction: column;
+  line-height: 0.9;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+.stamp.left  { left: var(--m);  text-align: left; }
+.stamp.right { right: var(--m); text-align: right; }
+.stamp .s-jp {
+  font-family: var(--f-jp);
+  font-weight: 900;
+  font-size: clamp(34px, 6vw, 72px);
+  color: var(--paper);
+  text-shadow: 4px 4px 0 var(--shu);
+}
+.stamp .s-word {
+  font-family: var(--f-display);
+  font-size: clamp(22px, 3.6vw, 44px);
+  color: var(--shu);
+  letter-spacing: 0.02em;
+}
+.stamp .s-pts {
+  font-family: var(--f-num);
+  font-weight: 700;
+  font-size: clamp(18px, 2.6vw, 30px);
+  color: var(--paper);
+}
+.stamp.t3 .s-jp { font-size: clamp(52px, 9vw, 110px); text-shadow: 6px 6px 0 var(--shu); }
+.stamp.t3 .s-word { font-size: clamp(30px, 5vw, 62px); }
+
+/* --- controls hint --- */
+#hint {
+  position: absolute;
+  bottom: var(--m);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  color: color-mix(in srgb, var(--paper) 65%, transparent);
+  white-space: nowrap;
+}
+
+/* ============ full-screen ink effects ============ */
+
+/* speed streaks — paper-white spokes from the vanishing point, clear in the
+   centre, glowing toward the edges. JS animates opacity + scale only. */
+#speed-lines {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9;
+  opacity: 0;
+  transform-origin: 50% 46%;
+  /* mix-blend-mode:screen is desktop-only (below) — on mobile a full-screen
+     blend re-reads the live canvas every frame, a real fill-rate cost */
+  background:
+    repeating-conic-gradient(from 0deg at 50% 46%,
+      rgba(242,239,229,0)    0deg,
+      rgba(242,239,229,0)    1.15deg,
+      rgba(242,239,229,0.55) 1.5deg,
+      rgba(242,239,229,0)    1.85deg,
+      rgba(242,239,229,0)    3deg);
+  -webkit-mask-image: radial-gradient(closest-side ellipse at 50% 46%, transparent 30%, #000 82%);
+  mask-image: radial-gradient(closest-side ellipse at 50% 46%, transparent 30%, #000 82%);
+  transition: opacity 0.12s linear, transform 0.12s linear;
+  will-change: opacity, transform;
+}
+/* the streaks glow on desktop where fill-rate is cheap; plain paper-white on touch */
+@media (pointer: fine) {
+  #speed-lines { mix-blend-mode: screen; }
+}
+
+#ink-flash {
+  position: fixed;
+  inset: 0;
+  background: var(--shu);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 40;
+}
+#wipe {
+  position: fixed;
+  inset: 0;
+  background: var(--paper);
+  transform: translateX(-102%);
+  pointer-events: none;
+  z-index: 80;
+}
+
+/* ============ INTRO POSTER ============ */
+
+#intro {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+}
+#intro-top {
+  position: absolute;
+  left: 0; right: 0; top: 0;
+  height: 66%;
+  overflow: hidden;
+}
+#intro-field {
+  position: absolute;
+  inset: 0;
+  background: var(--green);
+  transform: translateX(-100%);
+}
+#title {
+  position: absolute;
+  left: var(--m);
+  bottom: 0;
+  font-family: var(--f-display);
+  font-weight: 400;
+  font-size: min(23vw, 34vh);
+  line-height: 0.84;
+  color: var(--paper);
+  letter-spacing: -0.01em;
+  user-select: none;
+}
+#title .tline { display: block; }
+#title .tletter {
+  display: inline-block;
+  position: relative;
+  clip-path: inset(0 0 100% 0);
+}
+#title .tletter::before {
+  content: attr(data-l);
+  position: absolute;
+  left: 4px;
+  top: 5px;
+  color: var(--shu);
+  z-index: -1;
+  opacity: 0;
+}
+#title .tletter.ghost::before { opacity: 0.85; }
+/* vermilion ink flood while holding to drive */
+#title-fill {
+  position: absolute;
+  left: var(--m);
+  bottom: 0;
+  font-family: var(--f-display);
+  font-size: min(23vw, 34vh);
+  line-height: 0.84;
+  letter-spacing: -0.01em;
+  color: var(--shu);
+  pointer-events: none;
+  clip-path: inset(100% 0 0 0);
+}
+#title-fill .tline { display: block; }
+
+#spine {
+  position: absolute;
+  top: 6%;
+  right: calc(var(--m) * 0.75);
+  writing-mode: vertical-rl;
+  font-family: var(--f-jp);
+  font-weight: 900;
+  font-size: clamp(26px, 4.4vh, 44px);
+  letter-spacing: 0.14em;
+  color: var(--paper);
+  opacity: 0;
+}
+#roundel {
+  position: absolute;
+  top: 7%;
+  left: var(--m);
+  width: clamp(88px, 12vw, 132px);
+  height: auto;
+  transform: rotate(-8deg);
+  opacity: 0;
+}
+#roundel .ring-outer { fill: none; stroke: var(--shu); stroke-width: 2.5; }
+#roundel .ring-inner { fill: none; stroke: var(--shu); stroke-width: 1.25; }
+#roundel .rim-text {
+  font-family: var(--f-body);
+  font-weight: 600;
+  font-size: 9.2px;
+  letter-spacing: 0.14em;
+  fill: var(--shu);
+}
+#roundel .center-glyph {
+  font-family: var(--f-jp);
+  font-weight: 900;
+  font-size: 40px;
+  fill: var(--shu);
+  text-anchor: middle;
+}
+
+#intro-bottom {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 34%;
+  background: var(--ink);
+}
+#colophon {
+  position: absolute;
+  inset: 0;
+  padding: calc(var(--m) * 0.9) var(--m);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  opacity: 0;
+}
+#best-run {
+  font-family: var(--f-num);
+  font-weight: 600;
+  font-size: clamp(14px, 1.9vw, 20px);
+  letter-spacing: 0.18em;
+  color: color-mix(in srgb, var(--paper) 72%, transparent);
+}
+#start-word {
+  display: block;
+  font-family: var(--f-display);
+  font-size: clamp(28px, 4.6vw, 54px);
+  color: var(--paper);
+}
+#start-keys {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  color: color-mix(in srgb, var(--paper) 55%, transparent);
+  text-transform: uppercase;
+}
+#ink-gauge {
+  height: 4px;
+  background: color-mix(in srgb, var(--paper) 18%, transparent);
+  margin: 14px 0;
+}
+#ink-fill {
+  height: 100%;
+  background: var(--shu);
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+#credit {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  color: color-mix(in srgb, var(--paper) 38%, transparent);
+}
+
+/* ============ CRASH STAMP ============ */
+
+#crash-stamp {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 50;
+  transform: translate(-50%, -50%) rotate(-8deg) scale(0);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 0.9;
+  pointer-events: none;
+}
+#crash-jp {
+  font-family: var(--f-jp);
+  font-weight: 900;
+  font-size: clamp(90px, 22vw, 260px);
+  color: var(--shu);
+  text-shadow: 6px 6px 0 var(--paper);
+}
+#crash-en {
+  font-family: var(--f-display);
+  font-size: clamp(30px, 6vw, 72px);
+  letter-spacing: 0.34em;
+  color: var(--paper);
+  margin-top: 8px;
+}
+
+/* ============ RESULTS POSTER ============ */
+
+#results {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: min(440px, 100vw);
+  z-index: 55;
+  transform: translateY(102%);
+}
+#results-card {
+  height: 100%;
+  background: var(--green);
+  border-left: 3px solid var(--paper);
+  padding: calc(var(--m) * 1.2) calc(var(--m) * 1.1);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+#results header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-bottom: 3px solid var(--paper);
+  padding-bottom: 10px;
+  margin-bottom: 18px;
+}
+#results-kicker {
+  font-family: var(--f-display);
+  font-size: clamp(22px, 3vw, 30px);
+  letter-spacing: 0.04em;
+}
+#results-jp {
+  font-family: var(--f-jp);
+  font-weight: 900;
+  font-size: 15px;
+  opacity: 0.85;
+}
+.ledger .row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 12px 0;
+  opacity: 0;
+}
+.ledger .lbl {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+}
+.ledger .leader {
+  flex: 1;
+  border-bottom: 2px dotted color-mix(in srgb, var(--paper) 55%, transparent);
+  transform-origin: left center;
+}
+.ledger .val {
+  font-family: var(--f-num);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(18px, 2.4vw, 24px);
+}
+#score-final-rule {
+  height: 4px;
+  background: var(--paper);
+  margin: 20px 0 12px;
+  transform-origin: left center;
+}
+#r-score-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.34em;
+}
+#r-score {
+  font-family: var(--f-num);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(64px, 9vw, 110px);
+  line-height: 1.05;
+}
+#new-record {
+  align-self: flex-start;
+  margin-top: 6px;
+  padding: 6px 14px 5px;
+  border: 3px solid var(--shu);
+  color: var(--shu);
+  background: var(--paper);
+  font-family: var(--f-display);
+  font-size: clamp(16px, 2.2vw, 22px);
+  letter-spacing: 0.08em;
+  transform: rotate(-8deg) scale(0);
+}
+#restart-btn {
+  margin-top: auto;
+  background: var(--paper);
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  box-shadow: 0 0 0 3px var(--paper);
+  border-radius: 8px;
+  padding: 16px 20px 14px;
+  font-family: var(--f-display);
+  font-size: clamp(20px, 2.6vw, 26px);
+  letter-spacing: 0.06em;
+  transition: transform 0.12s ease, background 0.12s ease, color 0.12s ease;
+}
+#restart-btn:hover { background: var(--shu); color: var(--paper); transform: scale(1.02); }
+#restart-btn:active { transform: scale(0.97); }
+#restart-hint {
+  margin-top: 10px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-align: center;
+  color: color-mix(in srgb, var(--paper) 60%, transparent);
+}
+
+/* ============ PAUSE ============ */
+
+#pause {
+  position: fixed;
+  inset: 0;
+  z-index: 65;
+  background: color-mix(in srgb, var(--ink) 78%, transparent);
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+#pause-card {
+  text-align: center;
+  transform: rotate(-4deg);
+}
+#pause-jp {
+  display: block;
+  font-family: var(--f-jp);
+  font-weight: 900;
+  font-size: clamp(70px, 16vw, 180px);
+  color: var(--paper);
+  text-shadow: 5px 5px 0 var(--shu);
+  line-height: 1;
+}
+#pause-en {
+  display: block;
+  margin-top: 12px;
+  font-family: var(--f-display);
+  font-size: clamp(16px, 2.4vw, 24px);
+  letter-spacing: 0.3em;
+  color: var(--paper);
+}
+
+/* ============ mute / fallback ============ */
+
+#audio-btns {
+  position: fixed;
+  right: var(--m);
+  bottom: var(--m);
+  z-index: 50;   /* below the results poster so it never collides with RUN IT BACK */
+  display: flex;
+  gap: 8px;
+}
+#mute-btn, #music-btn {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  color: color-mix(in srgb, var(--paper) 62%, transparent);
+  border: 1px solid color-mix(in srgb, var(--paper) 35%, transparent);
+  padding: 8px 12px 7px;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+#mute-btn:hover, #music-btn:hover { color: var(--paper); border-color: var(--paper); }
+#music-btn.muted {
+  color: color-mix(in srgb, var(--paper) 35%, transparent);
+  border-color: color-mix(in srgb, var(--paper) 20%, transparent);
+  text-decoration: line-through;
+}
+/* a settings toggle is not a loss — muted dims, it doesn't bleed vermilion */
+#mute-btn.muted {
+  color: color-mix(in srgb, var(--paper) 35%, transparent);
+  border-color: color-mix(in srgb, var(--paper) 20%, transparent);
+  text-decoration: line-through;
+}
+
+/* on-screen boost trigger — coarse pointers only */
+#boost-btn {
+  display: none;
+  position: fixed;
+  right: var(--m);
+  bottom: calc(var(--m) + 52px);
+  z-index: 45;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 3px solid var(--shu);
+  background: color-mix(in srgb, var(--ink) 70%, transparent);
+  color: var(--shu);
+  font-family: var(--f-jp);
+  font-weight: 900;
+  font-size: 20px;
+  transform: rotate(-8deg);
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+#boost-btn:active { background: var(--shu); color: var(--paper); }
+@media (pointer: coarse) {
+  #boost-btn { display: block; }
+}
+
+#nogl[hidden] { display: none; }
+#nogl {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-family: var(--f-display);
+  font-size: clamp(20px, 4vw, 40px);
+  line-height: 1.4;
+  padding: 10vmin;
+}
+
+/* ============ mobile ============ */
+
+@media (max-width: 720px) {
+  :root { --m: 5vmin; }
+  #title, #title-fill { font-size: min(30vw, 24vh); bottom: 2vh; }
+  #score-digits { font-size: 13vw; }
+  #speed-num { font-size: 7vw; }
+  #combo-stack {
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: calc(var(--m) + 56px);
+    width: 60vw;
+  }
+  #fever-band { left: 50%; transform: translateX(-50%) scaleX(0); transform-origin: center; }
+  #hint { display: none; }
+  #air-trick { top: 26%; font-size: clamp(20px, 6vw, 40px); }
+  #overdrive-tag { font-size: 9px; letter-spacing: 0.12em; }
+  /* keep apex-live at its 150px base so it clears drift-live (118px) by 32px */
+  #results { width: 100vw; }
+  #results-card { border-left: none; border-top: 3px solid var(--paper); }
+  #restart-hint { display: none; }
+  #roundel { display: none; }
+  #mute-btn { bottom: calc(var(--m) * 0.6); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #restart-btn { transition: none; }
+  /* motion off: streaks become a faint static vignette, tags don't ease */
+  #speed-lines { opacity: 0.10 !important; transform: none !important; transition: none; }
+  #air-trick, #overdrive-tag { transition: none; }
+}

@@ -1,0 +1,1694 @@
+/* ============================================================
+   HIYARI — main. State machine, traffic fairness, near-miss
+   economy, crash ballet, and every GSAP choreography.
+   States: boot → intro → starting → run → crash → results
+   ============================================================ */
+
+(function () {
+  'use strict';
+
+  /* ---------- tuning ---------- */
+  const V0 = 26;                 // cruise at green flag, units/s
+  const VMAX = 88;
+  const ACCEL = 0.55;            // base speed growth per second
+  const KMH = 3.4;               // display conversion
+  const KM = 0.000944;           // units → km (consistent with KMH)
+  const STEER_VMAX = 16;         // lateral units/s at full lock
+  const X_CLAMP = 8.35;
+  const TIER_AT = [0, 38, 54, 70];      // baseSpeed thresholds
+  const DECAY = 4.5;             // combo lifetime, seconds
+  const COMBO_MAX = 8;
+  const NEAR_TIERS = [           // widest first; evaluated tightest first
+    { gap: 0.35, mult: 3, word: 'INCHES!', jp: 'ヒヤリハット', cls: 't3' },
+    { gap: 0.80, mult: 2, word: 'CLOSER',  jp: 'ヒヤリ!',     cls: 't2' },
+    { gap: 1.35, mult: 1, word: 'CLOSE',   jp: 'ヒヤリ',      cls: 't1' },
+  ];
+  const RM = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- v3 tuning: cornering / speed skills / stunts ---------- */
+  // cornering — a bend the car must actively hold; drift is the tool
+  const CORNER_MIN  = 1.2e-4;   // |curveK| above this = a "hard" corner (grip/apex/thinning)
+  const CF_K        = RM ? 14 : 18;   // centrifugal coefficient
+  const CF_MAX      = RM ? 16 : 22;   // hard cap — below drift authority (26.4) so drift always answers
+  const CF_AIR      = 0.30;     // centrifugal scale while airborne (don't shove landings)
+  const GRIP_CANCEL = 0.55;     // fraction of push cancelled when drifting into the apex
+  const CAM_YAW_K   = 650;      // camera turn-in feel-term
+  const CAM_YAW_MAX = 0.11;     // rad (~6.3°) comfort cap
+  const CAM_ROLL_K  = 300;      // camera bank (was 380 — headroom for yaw)
+  const PLYR_YAW_K  = 600;      // player nose points into the corner
+  const APEX_K      = 0.6;      // apex-ink accrual rate
+  const APEX_CLEAR  = 300;      // cornerApex needed for an APEX CLEAR payout
+  const P_HARD      = 0.45;     // chance a corner is "hard"
+
+  // speed skills — draft / slingshot / overdrive
+  const DRAFT_LATERAL = 1.7;    // |c.lx - px| to sit "in the pocket"
+  const DRAFT_ZMIN    = 5;      // forward gap min (units ahead)
+  const DRAFT_ZMAX    = 22;     // forward gap max
+  const DRAFT_FULL    = 1.0;    // seconds to full charge
+  const DRAFT_DECAY   = 0.5;    // seconds to bleed out of the pocket
+  const SLING_MIN     = 0.6;    // draft charge needed to arm a slingshot
+  const SLING_TIME    = 0.9;    // slingshot decay window, seconds
+  const SLING_MULT    = 1.18;   // peak slingshot speed mult, decays -> 1.0
+  const OD_ARM        = 1.5;    // sustained boost@high-speed to arm overdrive
+  const OD_ENTER_N    = 0.80;   // speedNorm to arm
+  const OD_EXIT_N     = 0.65;   // speedNorm to drop
+  const OD_SPEED      = 1.06;   // overdrive speed mult (extends the top end)
+  const OD_SCORE      = 1.5;    // overdrive score mult
+  const SCORE_MULT_CAP = 4;     // clamp on fever×boost×overdrive score mult
+
+  // air tricks
+  const ROLL_RATE = 6.0;        // rad/s barrel roll on z (←/→)
+  const FLIP_RATE = 5.0;        // rad/s flip on x (↑)
+  const SPIN_RATE = 5.5;        // rad/s spin on y (drift)
+  const AIR_STEER = 0.40;       // lateral steer scale while airborne (aim the landing)
+  const CLEAN_THRESH = 0.9;     // rad (~52°) residual-to-upright for a CLEAN land
+  const BOTCH_TIME  = 0.7;      // wipeout control-loss window
+  const BOTCH_STEER = 0.35;     // steer authority during wipeout (never zero)
+  const BOTCH_GRACE = 0.9;      // landGrace on a botch — forgiving, never a crash
+
+  const fmt = (n) => Math.floor(n).toLocaleString('en-US');
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+  };
+
+  /* ---------- WebGL gate ---------- */
+  function glOK() {
+    try {
+      const c = document.createElement('canvas');
+      return !!(window.WebGLRenderingContext && (c.getContext('webgl') || c.getContext('experimental-webgl')));
+    } catch (e) { return false; }
+  }
+  if (!glOK()) {
+    document.getElementById('nogl').hidden = false;
+    document.getElementById('intro').style.display = 'none';
+    return;
+  }
+
+  /* ---------- three ---------- */
+  const canvas = document.getElementById('scene');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0.1, 700);
+
+  const world = HYW.createWorld(renderer, scene);
+  const THEME = world.THEME;
+  const LANE_X = world.LANE_X;
+  const player = world.buildPlayer();
+  const audio = new window.HiyariAudio();
+
+  /* ---------- state ---------- */
+  let state = 'boot';
+  let paused = false;
+  const ts = { v: 1 };                    // gameplay time scale (GSAP-tweened)
+  let baseSpeed = 0, speed = 0, speedNorm = 0;
+  let steerL = false, steerR = false, vx = 0;
+  let score = 0, dist = 0, combo = 1, comboTimer = 0;
+  let fever = false, feverTime = 0;
+  let nearMisses = 0, bestCombo = 1, topSpeed = 0;
+  let tier = 0, nextMilestone = 10000;
+  let best = parseInt(store.get('hiyari-best') || '0', 10) || 0;
+  let bestPassedShown = false;
+  let fovKick = 0;
+  let lastStampMesh = null;
+  let camX = 0;
+  let clockT = 0;
+
+  /* v2 systems: boost / drift / air / curves */
+  let boostMeter = 0, wantBoost = false, boosting = false, boostFov = 0;
+  let driftHeld = false, drifting = false;
+  let driftPts = 0, driftTotal = 0, driftTime = 0, skidTimer = 0;
+  let airborne = false, vyAir = 0, airTime = 0, airTotal = 0;
+  let landGrace = 0;
+  const curveK = { v: 0 };
+  let curveActive = false, curveTimer = 14;
+  const ramps = [];
+  let rampTimer = 18;
+
+  /* v3 systems: real cornering / speed skills / air tricks */
+  let curveDir = 1, curveHard = false, cornerApex = 0, apexDrift = false;
+  let camYaw = 0;
+  let draftCharge = 0, draftedThisFrame = false, slingTimer = 0;
+  let overdrive = false, overdriveArm = 0, overdriveTime = 0, wasBoosting = false;
+  let rollAngle = 0, flipAngle = 0, spinAngle = 0, lastTrickSpin = 0, wipeoutTimer = 0;
+  let slingshots = 0, apexClears = 0, bestTrick = 10;   // bestTrick = ×mult*10 (10 => ×1.0)
+
+  player.group.position.set(LANE_X[2], 0, 0);
+
+  /* ---------- DOM refs ---------- */
+  const $ = (s) => document.querySelector(s);
+  const el = {
+    hud: $('#hud'), scoreBlock: $('#score-block'), scoreDigits: $('#score-digits'),
+    scoreRule: $('#score-rule'), speedNum: $('#speed-num'), speedPlate: $('#speed-plate'),
+    routeName: $('#route-name'), comboStack: $('#combo-stack'), feverBand: $('#fever-band'),
+    stamps: $('#stamps'), hint: $('#hint'), inkFlash: $('#ink-flash'), wipe: $('#wipe'),
+    intro: $('#intro'), introTop: $('#intro-top'), introBottom: $('#intro-bottom'),
+    introField: $('#intro-field'), title: $('#title'), tline1: $('#tline1'), tline2: $('#tline2'),
+    spine: $('#spine'), roundel: $('#roundel'), colophon: $('#colophon'),
+    bestRun: $('#best-run'), inkFill: $('#ink-fill'), startWord: $('#start-word'),
+    crashStamp: $('#crash-stamp'), results: $('#results'),
+    rDist: $('#r-dist'), rMiss: $('#r-miss'), rCombo: $('#r-combo'), rSpeed: $('#r-speed'),
+    rFever: $('#r-fever'), rScore: $('#r-score'), newRecord: $('#new-record'),
+    restartBtn: $('#restart-btn'), pause: $('#pause'), muteBtn: $('#mute-btn'),
+    musicBtn: $('#music-btn'), boostFill: $('#boost-fill'), boostBtn: $('#boost-btn'),
+    driftLive: $('#drift-live'), driftLivePts: $('#drift-live-pts'),
+    rDrift: $('#r-drift'), rAir: $('#r-air'),
+    // v3 HUD
+    speedLines: $('#speed-lines'), draftCharge: $('#draft-charge'),
+    overdriveTag: $('#overdrive-tag'), apexLive: $('#apex-live'), apexLivePts: $('#apex-live-pts'),
+    airTrick: $('#air-trick'),
+    rSling: $('#r-sling'), rApex: $('#r-apex'), rTrick: $('#r-trick'), rOd: $('#r-od'),
+  };
+
+  /* ---------- score odometer ---------- */
+  const DIGITS = 7;
+  const strips = [];
+  (function buildOdometer() {
+    for (let i = 0; i < DIGITS; i++) {
+      const slot = document.createElement('div');
+      slot.className = 'slot dim';
+      const strip = document.createElement('div');
+      strip.className = 'strip';
+      for (let d = 0; d <= 9; d++) {
+        const s = document.createElement('span');
+        s.textContent = d;
+        strip.appendChild(s);
+      }
+      slot.appendChild(strip);
+      el.scoreDigits.appendChild(slot);
+      strips.push({ slot, strip, cur: 0 });
+    }
+  })();
+  let scoreShown = -1;
+  function syncScore() {
+    const v = Math.min(Math.floor(score), 9999999);
+    if (v === scoreShown) return;
+    scoreShown = v;
+    const str = String(v).padStart(DIGITS, '0');
+    const firstSig = str.length - String(v).length;
+    for (let i = 0; i < DIGITS; i++) {
+      const d = +str[i];
+      strips[i].slot.classList.toggle('dim', i < (v === 0 ? DIGITS - 1 : firstSig));
+      if (strips[i].cur !== d) {
+        strips[i].cur = d;
+        gsap.to(strips[i].strip, { yPercent: -d * 10, duration: 0.18, ease: 'power2.out', overwrite: true });
+      }
+    }
+    audio.tick();
+  }
+
+  /* ---------- combo stripes ---------- */
+  function syncStripes() {
+    const want = Math.max(0, combo - 1);
+    while (el.comboStack.children.length > want) el.comboStack.removeChild(el.comboStack.lastChild);
+    while (el.comboStack.children.length < want) {
+      const s = document.createElement('div');
+      s.className = 'stripe';
+      s.style.width = (100 - el.comboStack.children.length * 8) + '%';
+      el.comboStack.appendChild(s);
+      gsap.fromTo(s, { scaleX: 0 }, { scaleX: 1, duration: 0.28, ease: 'power3.out' });
+    }
+  }
+
+  /* ---------- near-miss stamps (pooled DOM) ---------- */
+  const stampPool = [];
+  for (let i = 0; i < 5; i++) {
+    const n = document.createElement('div');
+    n.className = 'stamp';
+    n.innerHTML = '<span class="s-jp" lang="ja"></span><span class="s-word"></span><span class="s-pts"></span>';
+    el.stamps.appendChild(n);
+    stampPool.push(n);
+  }
+  let stampCursor = 0;
+  function showStamp(side, tierDef, pts) {
+    const n = stampPool[stampCursor];
+    stampCursor = (stampCursor + 1) % stampPool.length;
+    n.className = 'stamp ' + (side < 0 ? 'left' : 'right') + ' ' + tierDef.cls;
+    n.children[0].textContent = tierDef.jp;
+    n.children[1].textContent = tierDef.word;
+    n.children[2].textContent = '+' + fmt(pts);
+    gsap.killTweensOf(n);
+    gsap.timeline()
+      .fromTo(n, { opacity: 1, scale: RM ? 1 : 1.45, rotation: -4, x: 0, skewX: 0 },
+        { scale: 1, duration: 0.24, ease: 'back.out(4)' })
+      .to(n, { x: side < 0 ? -60 : 60, skewX: 8, opacity: 0, duration: 0.26, ease: 'power2.in' }, 0.78);
+  }
+
+  function inkSlap(op) {
+    if (RM) return;
+    gsap.fromTo(el.inkFlash, { opacity: op }, { opacity: 0, duration: 0.16, ease: 'power1.out', overwrite: true });
+  }
+
+  /* ---------- sky / tier plates ---------- */
+  function applySky(hex, dur) {
+    const c = new THREE.Color(hex);
+    gsap.to(scene.fog.color, { r: c.r, g: c.g, b: c.b, duration: dur, ease: 'power2.inOut', overwrite: 'auto' });
+    gsap.to(world.bandMat.color, { r: c.r, g: c.g, b: c.b, duration: dur, ease: 'power2.inOut', overwrite: 'auto' });
+  }
+
+  const gantryQueue = [];
+  function farthestGantry() {
+    return world.gantries.reduce((a, b) => (a.position.z < b.position.z ? a : b));
+  }
+  world.onGantryRecycle = (g) => {
+    if (gantryQueue.length) {
+      const q = gantryQueue.shift();
+      world.paintGantry(g, q.main, q.sub);
+    } else {
+      const opts = [
+        ['EXIT: NEVER', null],
+        [fmt(score) + ' PTS AHEAD', 'KEEP MISSING'],
+        ['REST AREA: NONE', null],
+        [(dist * KM).toFixed(1) + ' KM — NOWHERE', null],
+      ];
+      const pick = opts[Math.floor(Math.random() * opts.length)];
+      world.paintGantry(g, pick[0], pick[1]);
+    }
+  };
+  world.onKmRecycle = (m) => {
+    world.paintKmPost(m, ((dist + Math.abs(m.position.z)) * KM).toFixed(1));
+  };
+
+  function setTier(n) {
+    tier = n;
+    applySky(THEME.tiers[n], 1.2);
+    audio.chime();
+    // signboard flip
+    gsap.timeline()
+      .to(el.speedPlate, { rotationX: -88, duration: 0.22, ease: 'power2.in', onComplete: () => {
+        el.routeName.textContent = THEME.tierNames[n];
+      } })
+      .to(el.speedPlate, { rotationX: 0, duration: 0.4, ease: 'back.out(1.7)' });
+    gsap.fromTo(el.routeName, { yPercent: 110 }, { yPercent: 0, duration: 0.45, ease: 'power3.out', delay: 0.25 });
+    // the new route arrives as a real gantry you drive under
+    world.paintGantry(farthestGantry(), THEME.tierNames[n], 'SPEED UNCAPPED — STAY CLOSE');
+  }
+
+  /* ---------- fever ---------- */
+  function enterFever() {
+    if (fever) return;
+    fever = true;
+    applySky(THEME.shu, 0.6);
+    world.paintMoon(true);
+    player.paintLivery(combo, true);
+    audio.feverOn();
+    audio.musicSet('fever');
+    gsap.to(el.feverBand, { scaleX: 1, duration: 0.35, ease: 'back.out(2)' });
+    inkSlap(0.12);
+    audio.thunk(true);
+  }
+  function exitFever() {
+    if (!fever) return;
+    fever = false;
+    applySky(THEME.tiers[tier], 0.8);
+    world.paintMoon(false);
+    player.paintLivery(combo, false);
+    audio.feverOff();
+    if (state === 'run') audio.musicSet('run');
+    gsap.to(el.feverBand, { scaleX: 0, duration: 0.3, ease: 'power2.in' });
+  }
+
+  function breakCombo() {
+    if (combo === 1) return;
+    combo = 1;
+    exitFever();
+    player.paintLivery(1, false);
+    const kids = Array.from(el.comboStack.children);
+    gsap.to(kids, {
+      scaleX: 0, duration: 0.2, stagger: 0.03, ease: 'power2.in',
+      // guard: a near-miss during the shatter rebuilds the stack — don't wipe it
+      onComplete: () => { if (combo === 1) el.comboStack.innerHTML = ''; },
+    });
+  }
+
+  /* ---------- traffic ---------- */
+  const active = [];            // live traffic cars
+  const pools = {};             // per-type recycled meshes
+  let spawnTimer = 1.2;
+  let laneChangerBusy = false;
+
+  function acquireCar(typeIdx) {
+    const pool = pools[typeIdx] || (pools[typeIdx] = []);
+    let car = pool.pop();
+    if (!car) car = world.spawnTrafficMesh(typeIdx);
+    car.group.visible = true;
+    return car;
+  }
+  function releaseCar(car) {
+    car.group.visible = false;
+    gsap.killTweensOf(car);                 // lane-change lx tween
+    gsap.killTweensOf(car.group.position);
+    gsap.killTweensOf(car.group.rotation);
+    car.group.rotation.set(0, 0, 0);
+    car.isDraft = false; car.drafted = false; car.slingDone = false;
+    (pools[car.typeIdx] || (pools[car.typeIdx] = [])).push(car);
+  }
+
+  function carsInWindow(zc, half, exceptCar) {
+    const out = [];
+    for (const c of active) {
+      if (c !== exceptCar && Math.abs(c.z - zc) < half) out.push(c);
+    }
+    return out;
+  }
+
+  /* fairness: same-lane gap, ≥1 free lane in the spawn window, AND ≥1 free
+     lane when this car actually arrives at the player (speed differentials
+     otherwise let staggered spawns converge into a four-lane wall). */
+  function trySpawn(zBase) {
+    const SP = zBase != null ? zBase : world.SPAWN_Z;
+    const windowCars = carsInWindow(SP, 44);
+
+    // pick the archetype first so its closure rate can be projected
+    const r = Math.random();
+    let typeIdx = r < 0.34 ? 0 : r < 0.56 ? 1 : r < 0.70 ? 2 : r < 0.88 ? 3 : 4;
+    if (typeIdx >= 3 && windowCars.some((c) => c.typeIdx >= 3)) typeIdx = 0;
+    const type = world.TRAFFIC_TYPES[typeIdx];
+    const frac = type.speed[0] + Math.random() * (type.speed[1] - type.speed[0]);
+    const carSpeed = Math.max(10, Math.min(baseSpeed * frac, baseSpeed - 12));
+    const closure = Math.max(6, speed - carSpeed);
+    const tArrive = -SP / closure;                 // seconds until it reaches z≈0
+
+    const lanes = [0, 1, 2, 3].sort(() => Math.random() - 0.5);
+    for (const lane of lanes) {
+      let blocked = false;
+      for (const c of active) {
+        if (c.lane === lane && Math.abs(c.z - SP) < 55 + speed * 0.3) { blocked = true; break; }
+      }
+      if (blocked) continue;
+
+      const occupied = new Set(windowCars.map((c) => c.lane));
+      occupied.add(lane);
+      if (occupied.size >= 4) continue;            // never wall the spawn window
+
+      // project every live car to this car's arrival time; the player plane
+      // must still have an escape lane at that moment
+      const atArrival = new Set([lane]);
+      for (const c of active) {
+        const zProj = c.z + (speed - c.speed) * tArrive;
+        if (Math.abs(zProj) < 38) atArrival.add(c.lane);
+      }
+      if (atArrival.size >= 4) continue;           // never wall the player either
+
+      const car = acquireCar(typeIdx);
+      car.typeIdx = typeIdx;
+      car.lane = lane;
+      car.z = SP - Math.random() * 24;
+      car.speed = carSpeed;
+      car.lx = LANE_X[lane];                // logical x — bend is render-only
+      car.passed = false;
+      car.swelled = false;
+      car.minGap = Infinity;
+      car.changing = false;
+      car.baseTail = 1.4;
+      car.isDraft = false; car.drafted = false; car.slingDone = false;
+      car.group.rotation.set(0, 0, 0);
+      car.group.position.set(car.lx, 0, car.z);
+      active.push(car);
+      return;
+    }
+  }
+
+  /* the road is already alive when the run begins */
+  function seedTraffic() {
+    for (const z of [-115, -165, -215, -265, -315, -365]) {
+      trySpawn(z);
+      if (Math.random() < 0.45) trySpawn(z - 20);
+    }
+  }
+
+  function tryLaneChange(car, dt) {
+    if (laneChangerBusy || car.changing || car.z > -120 || car.z < -300) return;
+    if (Math.random() > 0.015 * dt * 60) return;
+    const dir = Math.random() < 0.5 ? -1 : 1;
+    const target = car.lane + dir;
+    if (target < 0 || target > 3) return;
+    for (const c of active) {
+      if (c !== car && c.lane === target && Math.abs(c.z - car.z) < 95) return;
+    }
+    const occupied = new Set(carsInWindow(car.z, 44, car).map((c) => c.lane));
+    occupied.add(target);
+    if (occupied.size >= 4) return;
+
+    laneChangerBusy = true;
+    car.changing = true;
+    car.lane = target;
+    // blinker, then the eased drift (logical x — the bend rides on top)
+    const blink = gsap.to(car.tail.glow.material, { opacity: 0.15, duration: 0.12, repeat: 5, yoyo: true });
+    gsap.to(car, {
+      lx: LANE_X[target], duration: 1.15, delay: 0.7, ease: 'power1.inOut',
+      onComplete: () => { car.changing = false; laneChangerBusy = false; blink.kill(); car.tail.glow.material.opacity = 0.55; },
+    });
+  }
+
+  /* ---------- oncoming silhouettes ---------- */
+  const oncoming = [];
+  for (let i = 0; i < 5; i++) {
+    const g = world.buildOncoming();
+    const o = { g, lx: world.ONCOMING_X[i % 2], speed: 30 + Math.random() * 26, played: false };
+    oncoming.push(o);
+    g.position.set(o.lx, 0, -80 - i * 110 - Math.random() * 40);
+    g.visible = true;
+  }
+  function resetOncoming(o) {
+    o.g.position.z = -480 - Math.random() * 140;
+    o.lx = world.ONCOMING_X[Math.random() < 0.5 ? 0 : 1];
+    o.g.position.x = o.lx;
+    o.speed = 30 + Math.random() * 26;
+    o.played = false;
+  }
+
+  /* ---------- near-miss economy ---------- */
+  function award(car) {
+    const g = car.minGap;
+    let tierDef = null;
+    for (const t of NEAR_TIERS) { if (g <= t.gap) { tierDef = t; break; } }
+    if (!tierDef) return;
+
+    combo = Math.min(COMBO_MAX, combo + 1);
+    comboTimer = DECAY;
+    nearMisses++;
+    bestCombo = Math.max(bestCombo, combo);
+    // shaving a car mid-slide is the crown move: double ink — triple through an apex
+    const driftMult = drifting ? (apexDrift ? 3 : 2) : 1;
+    const pts = 100 * tierDef.mult * combo * (fever ? 2 : 1) * driftMult;
+    score += pts;
+    boostMeter = Math.min(100, boostMeter + 8 + tierDef.mult * 5);
+
+    const side = Math.sign(car.lx - player.group.position.x) || 1;
+    const def = drifting
+      ? { jp: tierDef.jp, word: 'DRIFT ' + tierDef.word, cls: tierDef.cls }
+      : tierDef;
+    showStamp(side, def, pts);
+
+    // slingshot: pulling out of a fully-charged draft to shave the car you tucked behind
+    if (car.drafted && !car.slingDone) {
+      car.slingDone = true;
+      slingTimer = SLING_TIME;
+      slingshots++;
+      boostMeter = Math.min(100, boostMeter + 25);
+      const slPts = 500 * combo;
+      score += slPts;
+      showStamp(side, { jp: 'スリングショット', word: 'SLINGSHOT', cls: 't3' }, slPts);
+      inkSlap(0.14);
+      if (!RM) fovKick = Math.min(8, fovKick + 4);
+    }
+    audio.whoosh(side * 0.8, combo);
+    audio.thunk(tierDef.mult === 3);
+    inkSlap(tierDef.mult === 3 ? 0.14 : 0.08);
+
+    if (!RM) {
+      const dip = tierDef.mult === 3 ? 0.85 : 0.92;
+      gsap.timeline().to(ts, { v: dip, duration: 0.05 }).to(ts, { v: 1, duration: 0.14 });
+      fovKick = Math.min(6, fovKick + (tierDef.mult === 3 ? 3.5 : 2));
+    }
+
+    // print the near-miss onto the asphalt — the wake of close calls
+    const midX = (car.lx + player.group.position.x) / 2;
+    lastStampMesh = world.stampRoad(tierDef.jp, midX, 2.5, {
+      jp: true,
+      width: 3.2 + tierDef.mult * 1.6,
+      color: fever ? THEME.yellow : THEME.paper,
+      tilt: side * 3,
+    });
+
+    gsap.fromTo(el.scoreBlock, { scale: 1 }, { scale: 1.05, duration: 0.12, yoyo: true, repeat: 1, ease: 'power2.out' });
+    gsap.fromTo(el.scoreRule, { backgroundColor: '#E8380D' }, { backgroundColor: '#F2EFE5', duration: 0.3 });
+
+    if (combo === COMBO_MAX) enterFever();
+    else player.paintLivery(combo, fever);
+    syncStripes();
+
+    // flash the passed car's shell white for two frames
+    car.group.traverse((o) => {
+      if (o.isMesh && o.material && o.material.color && !o.userData.flashing) {
+        o.userData.flashing = true;
+        const old = o.material;
+        o.material = new THREE.MeshBasicMaterial({ color: 0xF2EFE5 });
+        setTimeout(() => { o.material = old; o.userData.flashing = false; }, 34);
+      }
+    });
+  }
+
+  /* ---------- crash ---------- */
+  const wreckPieces = [];
+  let orbitProxy = { a: 0 };
+  let crashPos = new THREE.Vector3();
+
+  function crash(car) {
+    state = 'crash';
+    audio.crash();
+    inkSlap(0.2);
+    exitFever();
+    drifting = false;
+    apexDrift = false;
+    overdrive = false;
+    el.driftLive.style.opacity = 0;
+    el.apexLive.style.opacity = 0;
+    el.airTrick.style.opacity = 0;
+    el.overdriveTag.style.opacity = 0;
+    if (!RM) el.speedLines.style.opacity = 0;
+    // the run's ink dries: combo stack fades out under the crash
+    gsap.to([el.comboStack, el.feverBand, el.hint], { opacity: 0, duration: 0.5 });
+    gsap.killTweensOf(ts);
+    ts.v = 0;                                   // impact freeze
+    gsap.to(ts, { v: 0.14, duration: 0.35, delay: 0.12, ease: 'power2.out' });
+    // kill the pending corner ramp-out tween so its onComplete can't pay out an apex after the crash
+    gsap.killTweensOf(curveK);
+    curveActive = false;
+    cornerApex = 0;
+
+    crashPos.copy(player.group.position);
+    topSpeed = Math.max(topSpeed, speed * KMH);
+
+    // the poster explodes into its shapes
+    wreckPieces.length = 0;
+    for (const p of player.pieces) {
+      scene.attach(p.obj);
+      wreckPieces.push({
+        obj: p.obj,
+        vel: new THREE.Vector3((Math.random() - 0.5) * 14, 4 + Math.random() * 9, -4 - Math.random() * 10),
+        ang: new THREE.Vector3((Math.random() - 0.5) * 9, (Math.random() - 0.5) * 9, (Math.random() - 0.5) * 9),
+      });
+    }
+    // shove the car we hit
+    gsap.to(car.group.position, { x: car.group.position.x + Math.sign(car.group.position.x - crashPos.x || 1) * 3.5, duration: 1.2, ease: 'power2.out' });
+    gsap.to(car.group.rotation, { y: (Math.random() - 0.5) * 1.4, duration: 1.2, ease: 'power2.out' });
+
+    // 事故 / CRASH diagonal stamp
+    gsap.timeline({ delay: 0.14 })
+      .set(el.crashStamp, { opacity: 1 })
+      .fromTo(el.crashStamp, { scale: 0, rotation: -14 },
+        { scale: 1, rotation: -8, duration: 0.3, ease: 'back.out(2.2)', onStart: () => audio.thunk(true) });
+
+    // camera orbits the wreck in slowed time
+    orbitProxy.a = 0;
+    gsap.to(orbitProxy, { a: 1.25, duration: 1.7, ease: 'power1.inOut' });
+
+    gsap.delayedCall(1.55, () => { if (state === 'crash') showResults(); });
+  }
+
+  function skipCrash() {
+    gsap.killTweensOf(orbitProxy);
+    if (state === 'crash') showResults();
+  }
+
+  /* ---------- results ---------- */
+  let newBest = false;
+  let resultsTl = null;
+  function showResults() {
+    state = 'results';
+    el.results.setAttribute('aria-hidden', 'false');
+    gsap.to(ts, { v: 0, duration: 0.4 });
+    gsap.to(el.crashStamp, { opacity: 0, duration: 0.3, delay: 0.2 });
+    gsap.to(canvas, { filter: 'brightness(0.42)', duration: 0.6 });
+
+    // wipe the previous run's ledger before it slides in
+    const rowsInit = el.results.querySelectorAll('.ledger .row');
+    rowsInit.forEach((row) => {
+      gsap.set(row, { opacity: 0 });
+      gsap.set(row.querySelector('.leader'), { scaleX: 0 });
+    });
+    el.rDist.textContent = '0.0 km';
+    el.rMiss.textContent = '0';
+    el.rCombo.textContent = '×1';
+    el.rSpeed.textContent = '0 km/h';
+    el.rDrift.textContent = '0';
+    el.rAir.textContent = '0.0 s';
+    el.rSling.textContent = '0';
+    el.rApex.textContent = '0';
+    el.rTrick.textContent = '×1.0';
+    el.rOd.textContent = '0.0 s';
+    el.rFever.textContent = '0.0 s';
+    el.rScore.textContent = '0';
+    audio.musicSet('results');
+
+    newBest = score > best;
+    if (newBest) {
+      best = Math.floor(score);
+      store.set('hiyari-best', String(best));
+      // the world keeps your score, printed at the crash site
+      world.stampRoad(fmt(best), crashPos.x, 6, { width: 10, noGhost: false });
+    }
+
+    el.newRecord.style.visibility = newBest ? 'visible' : 'hidden';
+    gsap.set(el.newRecord, { scale: 0 });
+
+    if (resultsTl) resultsTl.kill();
+    const tl = resultsTl = gsap.timeline();
+    tl.to(el.results, { yPercent: 0, duration: 0.55, ease: 'power3.out' });
+
+    const rows = el.results.querySelectorAll('.ledger .row');
+    rows.forEach((row, i) => {
+      tl.to(row, { opacity: 1, duration: 0.2 }, 0.35 + i * 0.14);
+      tl.fromTo(row.querySelector('.leader'), { scaleX: 0 }, { scaleX: 1, duration: 0.25, ease: 'power2.out' }, 0.35 + i * 0.14);
+    });
+    const vals = [
+      [el.rDist, { v: 0 }, dist * KM, (o) => o.v.toFixed(1) + ' km'],
+      [el.rMiss, { v: 0 }, nearMisses, (o) => String(Math.round(o.v))],
+      [el.rCombo, { v: 0 }, bestCombo, (o) => '×' + Math.round(o.v)],
+      [el.rSpeed, { v: 0 }, Math.round(topSpeed), (o) => Math.round(o.v) + ' km/h'],
+      [el.rDrift, { v: 0 }, driftTotal, (o) => fmt(o.v)],
+      [el.rAir, { v: 0 }, airTotal, (o) => o.v.toFixed(1) + ' s'],
+      [el.rSling, { v: 0 }, slingshots, (o) => String(Math.round(o.v))],
+      [el.rApex, { v: 0 }, apexClears, (o) => String(Math.round(o.v))],
+      [el.rTrick, { v: 0 }, bestTrick / 10, (o) => '×' + o.v.toFixed(1)],
+      [el.rOd, { v: 0 }, overdriveTime, (o) => o.v.toFixed(1) + ' s'],
+      [el.rFever, { v: 0 }, feverTime, (o) => o.v.toFixed(1) + ' s'],
+    ];
+    vals.forEach(([node, o, target, fmtFn], i) => {
+      tl.to(o, {
+        v: target, duration: 0.5, ease: 'power1.out',
+        onUpdate: () => { node.textContent = fmtFn(o); },
+      }, 0.45 + i * 0.14);
+    });
+    tl.fromTo('#score-final-rule', { scaleX: 0 }, { scaleX: 1, duration: 0.3, ease: 'power3.out' }, 1.15);
+    const so = { v: 0 };
+    tl.to(so, {
+      v: Math.floor(score), duration: 1.3, ease: 'power2.out',
+      onUpdate: () => { el.rScore.textContent = fmt(so.v); audio.tick(); },
+    }, 1.25);
+    if (newBest) {
+      tl.fromTo(el.newRecord, { scale: 0, rotation: -20 },
+        { scale: 1, rotation: -8, duration: 0.4, ease: 'back.out(5)', onStart: () => { audio.thunk(true); inkSlap(0.1); } }, 2.4);
+    }
+    tl.call(() => el.restartBtn.focus(), null, 1.6);
+  }
+
+  /* ---------- restart: squeegee wipe, rolling in under a second ---------- */
+  function restart() {
+    if (state !== 'results' && state !== 'crash') return;
+    audio.uiBlip();
+    gsap.killTweensOf(orbitProxy);
+    const tl = gsap.timeline();
+    tl.set(el.wipe, { x: '-102%' });
+    tl.to(el.wipe, { x: '0%', duration: 0.32, ease: 'power3.in' });
+    tl.call(resetRun);
+    tl.to(el.wipe, { x: '102%', duration: 0.34, ease: 'power3.out' }, '+=0.05');
+    tl.set(el.wipe, { x: '-102%' });
+  }
+
+  function resetRun() {
+    gsap.killTweensOf(ts);
+    ts.v = 1;
+    // kill every tween the crash/results choreography may still be running
+    if (resultsTl) { resultsTl.kill(); resultsTl = null; }
+    gsap.killTweensOf(canvas);
+    gsap.killTweensOf([el.comboStack, el.feverBand, el.hint]);
+    el.results.setAttribute('aria-hidden', 'true');
+    gsap.set(canvas, { filter: 'none' });
+    gsap.to(el.results, { yPercent: 102, duration: 0.3, ease: 'power2.in' });
+    gsap.set(el.crashStamp, { opacity: 0, scale: 0 });
+
+    // reassemble the wreck under the wipe
+    for (const p of player.pieces) {
+      player.group.attach(p.obj);
+      p.obj.position.copy(p.pos);
+      p.obj.rotation.copy(p.rot);
+    }
+    wreckPieces.length = 0;
+    player.group.position.set(LANE_X[2], 0, 0);
+    player.group.rotation.set(0, 0, 0);
+    vx = 0;
+
+    for (let i = active.length - 1; i >= 0; i--) releaseCar(active[i]);
+    active.length = 0;
+    laneChangerBusy = false;
+    world.clearDecals();
+    lastStampMesh = null;
+    oncoming.forEach((o, i) => { resetOncoming(o); o.g.position.z = -120 - i * 110; });
+
+    score = 0; dist = 0; combo = 1; comboTimer = 0;
+    fever = false; feverTime = 0; nearMisses = 0; bestCombo = 1; topSpeed = 0;
+    nextMilestone = 10000; bestPassedShown = false;
+
+    // v2 state
+    boostMeter = 0; boosting = false; boostFov = 0;
+    drifting = false; driftPts = 0; driftTotal = 0; driftTime = 0;
+    airborne = false; vyAir = 0; airTime = 0; airTotal = 0;
+    landGrace = 0;
+    gsap.killTweensOf(curveK);
+    curveK.v = 0; world.curveK = 0; curveActive = false; curveTimer = 14;
+    rampTimer = 18;
+    for (const r of ramps) { r.live = false; r.group.visible = false; }
+    world.clearSkids();
+    el.boostFill.style.transform = 'scaleX(0)';
+    el.driftLive.style.opacity = 0;
+
+    // v3 state: cornering / speed skills / air tricks
+    curveDir = 1; curveHard = false; cornerApex = 0; apexDrift = false; camYaw = 0;
+    draftCharge = 0; draftedThisFrame = false; slingTimer = 0;
+    overdrive = false; overdriveArm = 0; overdriveTime = 0; wasBoosting = false;
+    rollAngle = 0; flipAngle = 0; spinAngle = 0; lastTrickSpin = 0; wipeoutTimer = 0;
+    slingshots = 0; apexClears = 0; bestTrick = 10;
+    gsap.killTweensOf(player.group.rotation);
+    el.speedLines.style.opacity = RM ? '0.10' : '0';
+    el.speedLines.style.transform = 'none';
+    el.airTrick.style.opacity = 0;
+    el.overdriveTag.style.opacity = 0;
+    el.apexLive.style.opacity = 0;
+    el.draftCharge.style.transform = 'scaleX(0)';
+    audio.setDrift(0);
+    audio.musicSet('run');
+    scoreShown = -1; syncScore();
+    el.comboStack.innerHTML = '';
+    gsap.set([el.comboStack, el.feverBand], { opacity: 1 });
+    gsap.set(el.feverBand, { scaleX: 0 });
+    world.paintMoon(false);
+    player.paintLivery(1, false);
+    world.billboards.forEach((b) => { b.visible = false; });
+
+    tier = 0;
+    applySky(THEME.tiers[0], 0.1);
+    el.routeName.textContent = THEME.tierNames[0];
+    audio.feverOff();
+
+    baseSpeed = V0;
+    speed = V0;
+    speedNorm = 0;
+    spawnTimer = 1.4;
+    seedTraffic();
+    state = 'run';
+  }
+
+  /* ---------- intro ---------- */
+  (function buildTitle() {
+    const put = (host, word) => {
+      for (const ch of word) {
+        const s = document.createElement('span');
+        s.className = 'tletter';
+        s.dataset.l = ch;
+        s.textContent = ch;
+        host.appendChild(s);
+      }
+    };
+    put(el.tline1, 'HIYA');
+    put(el.tline2, 'RI!!');
+    // vermilion flood duplicate for the hold-to-drive ritual
+    const fill = document.createElement('div');
+    fill.id = 'title-fill';
+    fill.innerHTML = '<span class="tline">HIYA</span><span class="tline">RI!!</span>';
+    el.introTop.appendChild(fill);
+    el.titleFill = fill;
+  })();
+
+  if (best > 0) el.bestRun.textContent = 'BEST RUN — ' + fmt(best) + ' PTS';
+
+  function introChoreography() {
+    const letters = el.title.querySelectorAll('.tletter');
+    const tl = gsap.timeline({ delay: 0.15 });
+    tl.to(el.introField, { x: 0, duration: 0.55, ease: 'power3.inOut' });
+    tl.to(letters, {
+      clipPath: 'inset(0% 0% 0% 0%)', duration: 0.5, stagger: 0.07, ease: 'power4.out',
+    }, 0.35);
+    tl.call(() => {
+      letters.forEach((l, i) => setTimeout(() => l.classList.add('ghost'), i * 70 + 80));
+    }, null, 0.6);
+    tl.fromTo(el.spine, { y: -26 }, { y: 0, opacity: 1, duration: 0.5, ease: 'power3.out' }, 0.9);
+    tl.fromTo(el.roundel, { scale: 1.4, rotation: -30 }, { scale: 1, rotation: -8, opacity: 0.94, duration: 0.5, ease: 'back.out(2)' }, 1.05);
+    tl.to(el.colophon, { opacity: 1, duration: 0.45 }, 1.2);
+  }
+
+  /* hold-to-drive: the commit must be earned */
+  const hold = { v: 0, active: false, done: false };
+  let holdTween = null;
+  function holdStart() {
+    if (state !== 'intro' || hold.done) return;
+    audio.init();
+    audio.resume();
+    audio.idle();
+    audio.musicSet('intro');
+    hold.active = true;
+    if (holdTween) holdTween.kill();
+    holdTween = gsap.to(hold, {
+      v: 1, duration: 0.8 * (1 - hold.v), ease: 'none',
+      onUpdate: applyHold,
+      onComplete: commitStart,
+    });
+  }
+  function holdEnd() {
+    if (!hold.active || hold.done) return;
+    hold.active = false;
+    if (holdTween) holdTween.kill();
+    holdTween = gsap.to(hold, { v: 0, duration: 0.45, ease: 'power2.out', onUpdate: applyHold });
+  }
+  function applyHold() {
+    el.titleFill.style.clipPath = 'inset(' + ((1 - hold.v) * 100).toFixed(1) + '% 0 0 0)';
+    el.inkFill.style.transform = 'scaleX(' + hold.v.toFixed(3) + ')';
+    audio.holdRev(hold.v);
+  }
+
+  /* camera pose lerp for the fall into chase */
+  const introPose = { pos: new THREE.Vector3(10.5, 1.5, -10), look: new THREE.Vector3(LANE_X[2], 0.8, 1.6), fov: 30 };
+  const camTrans = { t: 0 };
+  const _look = new THREE.Vector3();
+  const _pos = new THREE.Vector3();
+
+  function chasePose(outPos, outLook) {
+    const px = player.group.position.x;
+    const py = player.group.position.y;
+    outPos.set(camX, 5.3 - speedNorm * 0.7 + py * 0.55, 10.6 - speedNorm * 1.1);
+    outLook.set(px * 0.82, 1.35 + py * 0.4, -24);
+  }
+
+  function commitStart() {
+    hold.done = true;
+    hold.active = false;
+    state = 'starting';
+    audio.thunk(true);
+    audio.musicSet('run');
+    inkSlap(0.1);
+
+    // the title is already painted on the asphalt — drive over it
+    world.stampRoad('HIYA', 0, -34, { width: 15 });
+    world.stampRoad('RI!!', 0, -62, { width: 15 });
+    world.stampRoad('ALMOST IS EVERYTHING', 0, -95, { width: 12, noGhost: true, opacity: 0.5 });
+    baseSpeed = V0;
+    seedTraffic();
+
+    // poster tears along the horizon
+    const tear = gsap.timeline({ delay: 0.1 });
+    tear.to(el.introTop, { yPercent: -105, duration: 0.7, ease: 'power4.inOut' });
+    tear.to(el.introBottom, { yPercent: 105, duration: 0.7, ease: 'power4.inOut' }, 0.05);
+    tear.set(el.intro, { display: 'none' });
+
+    gsap.to(camTrans, { t: 1, duration: 1.9, ease: 'power3.inOut', delay: 0.15 });
+    const sp = { v: 0 };
+    gsap.to(sp, {
+      v: V0, duration: 2.3, ease: 'power2.inOut', delay: 0.15,
+      onUpdate: () => { speed = sp.v; },
+      onComplete: () => {
+        baseSpeed = V0;
+        state = 'run';
+        el.hint && gsap.to(el.hint, { opacity: 0, duration: 0.6, delay: 5 });
+      },
+    });
+
+    // the HUD typesets itself as the engine opens up
+    const hudTl = gsap.timeline({ delay: 0.9 });
+    hudTl.to([el.scoreBlock, $('#speed-block'), el.comboStack, el.stamps, el.feverBand, el.hint], {
+      opacity: 1, duration: 0.01, stagger: 0.05,
+    });
+    hudTl.fromTo(el.scoreRule, { scaleX: 0 }, { scaleX: 1, duration: 0.5, ease: 'power3.out' }, 0.1);
+    hudTl.fromTo([el.scoreBlock, $('#speed-block')], { y: 18 }, { y: 0, duration: 0.5, stagger: 0.08, ease: 'power3.out' }, 0);
+    gsap.set(el.feverBand, { scaleX: 0 });
+  }
+
+  /* ---------- curves: real corners you must hold — drift is the tool ---------- */
+  function startCurve() {
+    curveActive = true;
+    const dir = Math.random() < 0.5 ? -1 : 1;
+    const hard = Math.random() < P_HARD;
+    // hard corners bend nearly 2× harder and demand a committed drift to hold the line
+    const mag = dir * (hard ? 1.6e-4 + Math.random() * 0.4e-4 : 0.7e-4 + Math.random() * 0.4e-4);
+    curveDir = dir;
+    curveHard = hard;
+    cornerApex = 0;                       // per-corner apex ledger starts fresh
+    const tIn = hard ? 2 : 3;
+    const tHold = hard ? 5 + Math.random() * 4 : 7 + Math.random() * 5;
+    const tOut = hard ? 2.5 : 3;
+    gsap.to(curveK, { v: mag, duration: tIn, ease: 'power1.inOut' });
+    gsap.to(curveK, {
+      v: 0, duration: tOut, ease: 'power1.inOut', delay: tIn + tHold,
+      onComplete: () => { curveActive = false; curveTimer = 9 + Math.random() * 10; evalApexClear(); },
+    });
+    // telegraph at the fog edge — hard corners burn in vermilion, gentle in paper
+    world.stampRoad(dir > 0 ? 'ドリフト →' : '← ドリフト', 0, -330, {
+      jp: true, width: 11, noGhost: true, opacity: 0.6, color: hard ? THEME.shu : THEME.paper,
+    });
+  }
+
+  /* the payout for holding a drift line all the way through a corner */
+  function evalApexClear() {
+    if (state !== 'run') { cornerApex = 0; return; }   // a stray onComplete after a crash pays nothing
+    if (cornerApex >= APEX_CLEAR) {
+      const pts = Math.floor(cornerApex) * combo;
+      score += pts;
+      apexClears++;
+      boostMeter = Math.min(100, boostMeter + 20);
+      showStamp(curveDir, { jp: 'アペックス', word: 'APEX CLEAR', cls: 't3' }, pts);
+      world.stampRoad('アペックス', player.group.position.x, 2.5, { jp: true, width: 5 });
+      inkSlap(0.12);
+      audio.thunk(true);
+      if (!RM) fovKick = Math.min(8, fovKick + 3);
+    }
+    cornerApex = 0;
+  }
+
+  /* ---------- stunt ramps ---------- */
+  for (let i = 0; i < 2; i++) {
+    const r = world.buildRamp();
+    r.live = false;
+    r.lane = 0;
+    r.z = 0;
+    ramps.push(r);
+  }
+
+  function spawnRamp() {
+    const r = ramps.find((x) => !x.live);
+    if (!r) return;
+    const lanes = [0, 1, 2, 3].sort(() => Math.random() - 0.5);
+    for (const lane of lanes) {
+      if (active.some((c) => c.lane === lane && Math.abs(c.z - world.SPAWN_Z) < 90)) continue;
+      r.live = true;
+      r.lane = lane;
+      r.z = world.SPAWN_Z - 10;
+      r.group.visible = true;
+      return;
+    }
+  }
+
+  function updateRamps(dt) {
+    for (const r of ramps) {
+      if (!r.live) continue;
+      r.z += speed * dt;
+      r.group.position.set(LANE_X[r.lane] + world.bendX(r.z), 0, r.z);
+      if (r.z > world.KILL_Z) { r.live = false; r.group.visible = false; continue; }
+      if (state === 'run' && !airborne &&
+          Math.abs(player.group.position.x - LANE_X[r.lane]) < r.halfW + 0.5 &&
+          Math.abs(r.z) < r.halfL) {
+        launch();
+      }
+    }
+  }
+
+  function launch() {
+    airborne = true;
+    vyAir = 6.8 + speed * 0.075;          // more hang time to actually fly a trick
+    airTime = 0;
+    rollAngle = 0; flipAngle = 0; spinAngle = 0; lastTrickSpin = 0;
+    audio.swell();
+    if (!RM) fovKick = Math.min(8, fovKick + 3);
+  }
+
+  const wrapAng = (a) => { a %= (Math.PI * 2); if (a > Math.PI) a -= Math.PI * 2; if (a < -Math.PI) a += Math.PI * 2; return a; };
+  const fullTurns = (a) => Math.floor(Math.abs(a) / (Math.PI * 2));
+
+  function trickName(distinct, fRoll, fFlip, fSpin) {
+    if (distinct >= 3) return '神業';                 // godlike: all three axes
+    if (distinct === 2) return 'コンボ';               // two-axis combo
+    if (fRoll >= 1) return fRoll >= 2 ? 'ダブルロール' : 'ロール';
+    if (fFlip >= 1) return fFlip >= 2 ? 'ダブルフリップ' : 'フリップ';
+    if (fSpin >= 1) return fSpin >= 2 ? 'ダブルスピン' : 'スピン';
+    return 'エア';
+  }
+
+  function land() {
+    const p = player.group.position;
+    p.y = 0;
+    airborne = false;
+    audio.landThump();
+    airTotal += airTime;
+
+    // near a multiple of 2π on every axis = a clean set-down; otherwise a botch
+    const cleanness = Math.max(Math.abs(wrapAng(rollAngle)), Math.abs(wrapAng(flipAngle)), Math.abs(wrapAng(spinAngle)));
+    const fRoll = fullTurns(rollAngle), fFlip = fullTurns(flipAngle), fSpin = fullTurns(spinAngle);
+    const totalFull = fRoll + fFlip + fSpin;
+    const distinct = (fRoll >= 1) + (fFlip >= 1) + (fSpin >= 1);
+    const trickMult = 1 + distinct * 0.5 + Math.max(0, totalFull - 1) * 0.25;
+
+    // settle from the WRAPPED angle so the grounded lerps unwind a small amount,
+    // never the full accumulated spin (18 rad → snap-back would look broken)
+    player.group.rotation.set(wrapAng(flipAngle), wrapAng(spinAngle), wrapAng(rollAngle));
+
+    if (cleanness < CLEAN_THRESH) {
+      const pts = Math.floor((150 + airTime * 250 + totalFull * 200) * trickMult * combo);
+      score += pts;
+      boostMeter = Math.min(100, boostMeter + 15 + 5 * distinct);
+      bestTrick = Math.max(bestTrick, Math.round(trickMult * 10));
+      showStamp(Math.sign(p.x) || 1,
+        { jp: trickName(distinct, fRoll, fFlip, fSpin),
+          word: totalFull >= 1 ? 'CLEAN' : 'AIR TIME',
+          cls: distinct >= 3 ? 't3' : (totalFull >= 1 || airTime > 1.15 ? 't2' : 't1') }, pts);
+      world.stampRoad('着地', p.x, 2.5, { jp: true, width: 3.6 });
+      inkSlap(distinct >= 2 ? 0.12 : 0.08);
+      audio.thunk(distinct >= 2);
+    } else {
+      // botched set-down: a tumble + a beat of lost steering — never a crash
+      wipeoutTimer = BOTCH_TIME;
+      landGrace = BOTCH_GRACE;
+      showStamp(Math.sign(p.x) || 1, { jp: '失敗', word: 'BOTCH', cls: 't1' }, 0);
+      inkSlap(0.06);
+      audio.thunk(false);
+    }
+    landGrace = Math.max(landGrace, 0.6);   // never below the base grace
+    el.airTrick.style.opacity = 0;
+  }
+
+  /* ---------- drift bank ---------- */
+  function endDrift() {
+    if (driftPts >= 80) {
+      const banked = Math.floor(driftPts);
+      score += banked;
+      driftTotal += banked;
+      showStamp(Math.sign(vx) || 1, { jp: 'ドリフト', word: 'DRIFT INK', cls: driftTime > 2 ? 't2' : 't1' }, banked);
+      audio.thunk(false);
+      if (driftTime > 1.1) boostMeter = Math.min(100, boostMeter + 12);
+    }
+    driftPts = 0;
+    driftTime = 0;
+    el.driftLive.style.opacity = 0;
+  }
+
+  /* ---------- milestones & personal best ---------- */
+  function checkMilestones() {
+    if (score >= nextMilestone) {
+      const b = world.billboards.reduce((a, c) => (a.position.z < c.position.z ? a : c));
+      world.paintBillboard(b, fmt(nextMilestone), 'MILESTONE PRINTED');
+      b.visible = true;
+      audio.chime();
+      nextMilestone += 10000;
+    }
+    if (!bestPassedShown && best > 0 && score > best && state === 'run') {
+      bestPassedShown = true;
+      world.paintGantry(farthestGantry(), 'BEST: PASSED', fmt(best) + ' PTS IS BEHIND YOU');
+      audio.chime();
+    }
+  }
+
+  /* ---------- input ---------- */
+  const keyState = {};
+  window.addEventListener('keydown', (e) => {
+    if (e.repeat) { if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' '].includes(e.key)) e.preventDefault(); return; }
+    audio.resume();
+    keyState[e.code] = true;
+    switch (e.code) {
+      case 'ArrowLeft': case 'KeyA': steerL = true; e.preventDefault(); break;
+      case 'ArrowRight': case 'KeyD': steerR = true; e.preventDefault(); break;
+      case 'ArrowUp': case 'KeyW': wantBoost = true; e.preventDefault(); break;
+      case 'ShiftLeft': case 'ShiftRight': case 'Space': driftHeld = true; e.preventDefault(); break;
+      case 'KeyM': toggleMute(); break;
+      case 'KeyP': togglePause(); break;
+      case 'KeyR':
+        if (state === 'crash') skipCrash();
+        else if (state === 'results') restart();
+        break;
+      case 'Enter':
+        if (state === 'results') restart();
+        break;
+    }
+    if (state === 'intro' && !e.metaKey && !e.ctrlKey && !e.altKey && !['KeyM', 'KeyP'].includes(e.code)) holdStart();
+    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'].includes(e.code)) e.preventDefault();
+  });
+  window.addEventListener('keyup', (e) => {
+    keyState[e.code] = false;
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') steerL = false;
+    if (e.code === 'ArrowRight' || e.code === 'KeyD') steerR = false;
+    if (e.code === 'ArrowUp' || e.code === 'KeyW') wantBoost = false;
+    if (e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'Space') driftHeld = false;
+    if (state === 'intro') holdEnd();
+  });
+
+  /* touch: hold to start, then left/right halves steer */
+  let touchSteer = 0;
+  function touchXToSteer(t) {
+    touchSteer = (t.clientX < window.innerWidth / 2) ? -1 : 1;
+  }
+  const onButton = (e) => !!(e.target && e.target.closest && e.target.closest('button'));
+  window.addEventListener('touchstart', (e) => {
+    if (onButton(e)) return;
+    e.preventDefault();
+    audio.resume();
+    if (state === 'intro') { holdStart(); return; }
+    if (state === 'results') return;
+    touchXToSteer(e.touches[0]);
+    driftHeld = e.touches.length >= 2;   // second finger = drift
+  }, { passive: false });
+  window.addEventListener('touchmove', (e) => {
+    if (state === 'run' || state === 'starting') {
+      e.preventDefault();
+      touchXToSteer(e.touches[0]);
+      driftHeld = e.touches.length >= 2;
+    }
+  }, { passive: false });
+  window.addEventListener('touchend', (e) => {
+    if (state === 'intro') holdEnd();
+    if (e.touches.length === 0) touchSteer = 0;
+    else touchXToSteer(e.touches[0]);
+    driftHeld = e.touches.length >= 2;
+  });
+  window.addEventListener('touchcancel', () => {
+    touchSteer = 0;
+    driftHeld = false;
+    if (state === 'intro') holdEnd();
+  });
+
+  /* on-screen boost trigger (coarse pointers) */
+  const boostOn = (e) => { e.preventDefault(); audio.resume(); wantBoost = true; };
+  const boostOff = () => { wantBoost = false; };
+  el.boostBtn.addEventListener('pointerdown', boostOn);
+  el.boostBtn.addEventListener('pointerup', boostOff);
+  el.boostBtn.addEventListener('pointercancel', boostOff);
+  el.boostBtn.addEventListener('pointerleave', boostOff);
+  window.addEventListener('mousedown', (e) => {
+    if (state === 'intro' && !onButton(e)) holdStart();
+  });
+  window.addEventListener('mouseup', () => { if (state === 'intro') holdEnd(); });
+
+  el.restartBtn.addEventListener('click', restart);
+
+  /* mute */
+  let muted = store.get('hiyari-muted') === '1';
+  function syncMuteBtn() {
+    el.muteBtn.textContent = muted ? 'SOUND OFF' : 'SOUND ON';
+    el.muteBtn.classList.toggle('muted', muted);
+  }
+  function toggleMute() {
+    muted = !muted;
+    store.set('hiyari-muted', muted ? '1' : '0');
+    audio.setMuted(muted);
+    syncMuteBtn();
+  }
+  audio.muted = muted;
+  syncMuteBtn();
+  el.muteBtn.addEventListener('click', () => { audio.init(); audio.resume(); toggleMute(); });
+
+  /* music toggle (independent of SFX) */
+  let musicOn = store.get('hiyari-music') !== '0';
+  audio._musicPref = musicOn;
+  function syncMusicBtn() {
+    el.musicBtn.textContent = musicOn ? 'MUSIC ON' : 'MUSIC OFF';
+    el.musicBtn.classList.toggle('muted', !musicOn);
+  }
+  syncMusicBtn();
+  el.musicBtn.addEventListener('click', () => {
+    audio.init();
+    audio.resume();
+    musicOn = !musicOn;
+    store.set('hiyari-music', musicOn ? '1' : '0');
+    audio.setMusicOn(musicOn);
+    syncMusicBtn();
+    audio.uiBlip();
+  });
+
+  /* pause — gameplay GSAP tweens (lane changes, blinkers) freeze with it */
+  function togglePause() {
+    if (state !== 'run') return;
+    paused = !paused;
+    el.pause.style.display = paused ? 'flex' : 'none';
+    el.pause.setAttribute('aria-hidden', paused ? 'false' : 'true');
+    if (paused) gsap.globalTimeline.pause();
+    else gsap.globalTimeline.resume();
+    audio.duck(paused);
+  }
+  // tap anywhere on the overlay resumes — touch players have no P key
+  el.pause.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    if (paused) togglePause();
+  });
+  function clearInputs() {
+    steerL = false;
+    steerR = false;
+    touchSteer = 0;
+    wantBoost = false;
+    driftHeld = false;
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      clearInputs();
+      if (state === 'run' && !paused) togglePause();
+    }
+    audio.resume();
+  });
+  window.addEventListener('blur', () => {
+    clearInputs();
+    if (state === 'run' && !paused) togglePause();
+  });
+
+  /* resize */
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  /* ---------- per-frame systems ---------- */
+  let hudScoreAt = 0, hudSpeedAt = 0;
+
+  function updateRun(dt, raw, now) {
+    baseSpeed = Math.min(VMAX, baseSpeed + ACCEL * dt);
+
+    // boost can't fire mid-air — up-arrow there is a FLIP, not a burn
+    boosting = wantBoost && boostMeter > 0 && !airborne;
+    if (boosting) boostMeter = Math.max(0, boostMeter - 34 * dt);
+    if (boosting && !wasBoosting && !RM) fovKick = Math.min(8, fovKick + 4);   // launch snap
+    wasBoosting = boosting;
+
+    // overdrive: hold boost flat-out long enough to break into a flow state.
+    // arm only builds while NOT yet in overdrive (stays bounded), and resets on
+    // every drop so re-entry must earn a fresh sustain window — no free re-pop.
+    if (!overdrive) {
+      if (speedNorm > OD_ENTER_N && boosting) overdriveArm = Math.min(OD_ARM, overdriveArm + dt);
+      else overdriveArm = Math.max(0, overdriveArm - dt * 2);
+      if (overdriveArm >= OD_ARM) {
+        overdrive = true;
+        showStamp(1, { jp: 'オーバードライブ', word: 'OVERDRIVE', cls: 't3' }, 0);
+        inkSlap(0.1);
+        if (!RM) fovKick = Math.min(9, fovKick + 3);
+      }
+    } else if (speedNorm < OD_EXIT_N || boostMeter <= 0) {
+      overdrive = false;
+      overdriveArm = 0;
+    }
+    if (overdrive) overdriveTime += dt;
+
+    // slingshot burst decays over its window
+    if (slingTimer > 0) slingTimer = Math.max(0, slingTimer - dt);
+    const slingMult = slingTimer > 0 ? 1 + (SLING_MULT - 1) * (slingTimer / SLING_TIME) : 1;
+
+    speed = baseSpeed * (fever ? 1.12 : 1) * (boosting ? 1.42 : 1) *
+            (1 + 0.05 * draftCharge) * slingMult * (overdrive ? OD_SPEED : 1);
+    speedNorm = Math.max(0, Math.min(1, (speed - V0) / (VMAX - V0)));
+    topSpeed = Math.max(topSpeed, speed * KMH);
+
+    const sm = Math.min(SCORE_MULT_CAP, (fever ? 2 : 1) * (boosting ? 1.5 : 1) * (overdrive ? OD_SCORE : 1));
+    score += speed * dt * sm;
+    dist += speed * dt;
+    if (fever) feverTime += dt;
+
+    // turning points arrive on their own schedule
+    if (!curveActive) {
+      curveTimer -= dt;
+      if (curveTimer <= 0) startCurve();
+    }
+    rampTimer -= dt;
+    if (rampTimer <= 0) { spawnRamp(); rampTimer = 24 + Math.random() * 16; }
+
+    // tier ladder
+    for (let i = TIER_AT.length - 1; i > tier; i--) {
+      if (baseSpeed >= TIER_AT[i]) { setTier(i); break; }
+    }
+
+    // combo decay: the printed wake de-inks behind you
+    if (combo > 1) {
+      comboTimer -= dt;
+      const frac = Math.max(0, comboTimer / DECAY);
+      const top = el.comboStack.lastChild;
+      if (top) top.style.transform = 'scaleX(' + frac.toFixed(3) + ')';
+      if (lastStampMesh && lastStampMesh.userData.live) {
+        lastStampMesh.material.opacity = 0.2 + 0.72 * frac;
+      }
+      if (comboTimer < 1 && comboTimer > 0) audio.warnTick();
+      if (comboTimer <= 0) breakCombo();
+    }
+
+    checkMilestones();
+
+    // spawner
+    const density = 0.35 + speedNorm * 0.65;
+    spawnTimer -= dt * (fever ? 1.3 : 1);
+    if (spawnTimer <= 0) {
+      trySpawn();
+      spawnTimer = (1.7 - density * 1.05) * (0.75 + Math.random() * 0.5);
+      if (Math.abs(curveK.v) > CORNER_MIN) spawnTimer *= 1.4;   // thin traffic through hard corners
+    }
+
+    // HUD throttles
+    if (now - hudScoreAt > 0.08) { hudScoreAt = now; syncScore(); }
+    if (now - hudSpeedAt > 0.12) {
+      hudSpeedAt = now;
+      el.speedNum.textContent = Math.round(speed * KMH);
+      el.boostFill.style.transform = 'scaleX(' + (boostMeter / 100).toFixed(3) + ')';
+      el.draftCharge.style.transform = 'scaleX(' + draftCharge.toFixed(3) + ')';
+      el.overdriveTag.style.opacity = overdrive ? '1' : '0';
+      if (!RM) {
+        const inten = Math.max(0, Math.min(1, speedNorm * 0.6 + (boosting ? 0.3 : 0) + (overdrive ? 0.4 : 0)));
+        el.speedLines.style.opacity = speedNorm > 0.30 ? (inten * 0.5).toFixed(3) : '0';
+        el.speedLines.style.transform = 'scale(' + (1 + inten * 0.14).toFixed(3) + ')';
+      }
+    }
+
+    audio.setDrive(speedNorm, vx / STEER_VMAX, tier, boosting ? 1 : 0);
+  }
+
+  function updatePlayer(dt, raw) {
+    const steer = (steerR ? 1 : 0) - (steerL ? 1 : 0) || touchSteer;
+    const steerSign = Math.sign(steer);
+    const p = player.group.position;
+
+    // drift: rear steps out, lateral authority jumps, the road gets inked (ground only)
+    drifting = driftHeld && state === 'run' && !airborne &&
+      (steer !== 0 || Math.abs(vx) > 5);
+    // drifting INTO a live corner is the cornering skill — grip + apex ink
+    apexDrift = drifting && Math.abs(curveK.v) > CORNER_MIN && steerSign === Math.sign(curveK.v);
+
+    // fumbled landing = a beat of lost steering. scale the TARGET (dt-invariant,
+    // true 35% authority) — multiplying vx each frame would compound to ~6%.
+    const target = steer * STEER_VMAX * (drifting ? 1.65 : 1) * (airborne ? AIR_STEER : 1) *
+      (wipeoutTimer > 0 ? BOTCH_STEER : 1);
+    vx += (target - vx) * (1 - Math.exp(-(drifting ? 5.2 : 7) * dt));
+
+    // centrifugal push: a corner shoves you toward the outside wall. capped BELOW drift
+    // authority (26.4) so a committed drift can always hook the line back inside.
+    let cf = curveK.v * speed * speed * CF_K;
+    cf = Math.max(-CF_MAX, Math.min(CF_MAX, cf));
+    if (airborne) cf *= CF_AIR;                 // don't shove landings around
+    if (apexDrift) cf *= (1 - GRIP_CANCEL);     // drift grip cancels most of the push
+    p.x -= cf * dt;                             // BEFORE the clamp: the wall always catches first
+
+    p.x += vx * dt;
+    if (p.x > X_CLAMP) { p.x = X_CLAMP; vx = Math.min(0, vx); }
+    if (p.x < -X_CLAMP) { p.x = -X_CLAMP; vx = Math.max(0, vx); }
+
+    if (airborne) {
+      // in the air the SAME keys become trick controls — continuous rotation you "fly"
+      p.y += vyAir * dt;
+      vyAir -= 20 * dt;
+      airTime += dt;
+      if (steerSign) { rollAngle += ROLL_RATE * steerSign * dt; lastTrickSpin = steerSign; }
+      if (wantBoost) flipAngle += FLIP_RATE * dt;                 // ↑ = flip (no boost aloft)
+      if (driftHeld) spinAngle += SPIN_RATE * (lastTrickSpin || 1) * dt;
+      player.group.rotation.set(flipAngle, spinAngle, rollAngle); // air OWNS all three axes
+      // live trick readout
+      const rc = fullTurns(rollAngle), fc = fullTurns(flipAngle), sc = fullTurns(spinAngle);
+      let lbl = '';
+      if (rc) lbl += 'ロール×' + rc + ' ';
+      if (fc) lbl += 'フリップ×' + fc + ' ';
+      if (sc) lbl += 'スピン×' + sc + ' ';
+      el.airTrick.textContent = lbl || 'エア';
+      el.airTrick.style.opacity = 1;
+      if (p.y <= 0 && vyAir < 0) land();
+    } else {
+      landGrace = Math.max(0, landGrace - dt);
+      if (wipeoutTimer > 0) wipeoutTimer -= dt;
+      player.group.rotation.x += (0 - player.group.rotation.x) * (1 - Math.exp(-8 * dt));
+      p.y = Math.sin(clockT * 52) * 0.004 * (0.4 + speedNorm);
+
+      // body language: yaw exaggerates in a slide AND points the nose into the corner
+      let yaw = -vx * (drifting ? 0.034 : 0.012) - curveK.v * PLYR_YAW_K;
+      yaw = Math.max(-0.58, Math.min(0.58, yaw));
+      player.group.rotation.y += (yaw - player.group.rotation.y) * (1 - Math.exp(-9 * dt));
+      const bank = -vx * 0.021;
+      player.group.rotation.z += (bank - player.group.rotation.z) * (1 - Math.exp(-9 * dt));
+    }
+
+    // skid ink + drift ledger (ground)
+    if (drifting && Math.abs(vx) > 6) {
+      driftTime += dt;
+      driftPts += speed * dt * 2;
+      skidTimer -= dt;
+      if (skidTimer <= 0) {
+        skidTimer = 0.055;
+        const y = player.group.rotation.y;
+        world.dropSkid(p.x - 0.8, 2.0, y);
+        world.dropSkid(p.x + 0.8, 2.0, y);
+      }
+      audio.setDrift(Math.min(1, Math.abs(vx) / 22));
+      el.driftLive.style.opacity = 1;
+      el.driftLivePts.textContent = '+' + Math.floor(driftPts);
+    } else {
+      if (driftTime > 0) endDrift();
+      audio.setDrift(0);
+    }
+
+    // apex ink accrues while you hold the drift through a corner
+    if (apexDrift) {
+      cornerApex += speed * dt * (Math.abs(curveK.v) / 1e-4) * APEX_K;
+      el.apexLive.style.opacity = 1;
+      el.apexLivePts.textContent = Math.floor(cornerApex);
+    } else {
+      el.apexLive.style.opacity = 0;
+    }
+  }
+
+  function updateTraffic(dt) {
+    const px = player.group.position.x;
+    draftedThisFrame = false;
+    for (let i = active.length - 1; i >= 0; i--) {
+      const c = active[i];
+      c.isDraft = false;
+      c.z += (speed - c.speed) * dt;
+      c.group.position.z = c.z;
+      c.group.position.x = c.lx + world.bendX(c.z);
+
+      tryLaneChange(c, dt);
+
+      // danger telegraph: taillights bloom when you share a lane path
+      const conflict = c.z > -95 && c.z < -6 && Math.abs(c.lx - px) < 1.7;
+      const targetGlow = conflict ? 3.2 : 1.4;
+      c.baseTail += (targetGlow - c.baseTail) * (1 - Math.exp(-6 * dt));
+      c.tail.bar.material.emissiveIntensity = c.baseTail;
+      if (!c.changing) c.tail.glow.material.opacity = 0.4 + (c.baseTail - 1.4) * 0.2;
+
+      const halfLsum = c.halfL + player.halfL;
+      const halfWsum = c.halfW + player.halfW;
+      const dx = Math.abs(c.lx - px);
+      const dz = Math.abs(c.z);
+
+      // slipstream pocket: tucked close behind a car you're catching, not yet passed
+      const gapAhead = -c.z;
+      if (!c.passed && c.z < 0 && gapAhead > DRAFT_ZMIN && gapAhead < DRAFT_ZMAX &&
+          dx < DRAFT_LATERAL && speed > c.speed) {
+        c.isDraft = true;
+        draftedThisFrame = true;
+        if (draftCharge >= SLING_MIN) c.drafted = true;   // armed — passing it fires a slingshot
+      }
+
+      // track the tightest lateral gap through the overlap window (grounded only)
+      if (dz < halfLsum + 2.5 && !airborne) {
+        c.minGap = Math.min(c.minGap, dx - halfWsum);
+      }
+
+      // the inhale before the tightest passes
+      if (!c.passed && !c.swelled && c.z < 0 && !airborne) {
+        const rel = speed - c.speed;
+        if (rel > 1) {
+          const tta = (-c.z - halfLsum) / rel;
+          if (tta > 0 && tta < 0.3 && dx - halfWsum < 0.55) {
+            c.swelled = true;
+            audio.swell();
+          }
+        }
+      }
+
+      // collision (0.88/0.86 forgiveness; airborne cars fly clean over traffic)
+      if (state === 'run' && !airborne && landGrace <= 0 &&
+          dx < halfWsum * 0.88 && dz < halfLsum * 0.86) {
+        crash(c);
+        return;
+      }
+
+      // fully passed → judge the pass
+      if (!c.passed && c.z - c.halfL > player.halfL) {
+        c.passed = true;
+        if (c.minGap > 0) award(c);
+      }
+
+      if (c.z > world.KILL_Z) {
+        releaseCar(c);
+        active.splice(i, 1);
+      }
+    }
+
+    // charge the draft while tucked in; bleed it out once you leave the pocket
+    if (draftedThisFrame) draftCharge = Math.min(1, draftCharge + dt / DRAFT_FULL);
+    else draftCharge = Math.max(0, draftCharge - dt / DRAFT_DECAY);
+  }
+
+  function updateOncoming(dt) {
+    for (const o of oncoming) {
+      o.g.position.z += (speed + o.speed) * dt;
+      o.g.position.x = o.lx + world.bendX(o.g.position.z);
+      if (!o.played && o.g.position.z > 4) {
+        o.played = true;
+        if (state === 'run') audio.passby(-0.75);
+      }
+      if (o.g.position.z > world.KILL_Z + 8) resetOncoming(o);
+    }
+  }
+
+  function updateWreck(dt) {
+    for (const w of wreckPieces) {
+      w.vel.y -= 22 * dt;
+      w.obj.position.addScaledVector(w.vel, dt);
+      if (w.obj.position.y < 0.2) { w.obj.position.y = 0.2; w.vel.y *= -0.35; w.vel.x *= 0.8; w.vel.z *= 0.8; }
+      w.obj.rotation.x += w.ang.x * dt;
+      w.obj.rotation.y += w.ang.y * dt;
+      w.obj.rotation.z += w.ang.z * dt;
+    }
+  }
+
+  function updateCamera(raw) {
+    const px = player.group.position.x;
+    camX += (px * 0.55 - camX) * (1 - Math.exp(-4.5 * raw));
+
+    if (state === 'intro') {
+      camera.position.copy(introPose.pos);
+      camera.position.y += Math.sin(clockT * 0.7) * 0.06;
+      camera.lookAt(introPose.look);
+      camera.fov = introPose.fov;
+    } else if (state === 'starting') {
+      chasePose(_pos, _look);
+      camera.position.lerpVectors(introPose.pos, _pos, camTrans.t);
+      _look.lerpVectors(introPose.look, _look, camTrans.t);
+      camera.lookAt(_look);
+      camera.fov = introPose.fov + (62 + 26 * speedNorm - introPose.fov) * camTrans.t;
+    } else if (state === 'crash' || state === 'results') {
+      const a = orbitProxy.a;
+      const r = 13 - a * 2.5;
+      camera.position.set(
+        crashPos.x + Math.sin(a) * r,
+        5.4 + a * 1.6,
+        crashPos.z + Math.cos(a) * r
+      );
+      camera.lookAt(crashPos.x, 0.7, crashPos.z);
+      camera.fov = 58;
+    } else {
+      chasePose(_pos, _look);
+      camera.position.copy(_pos);
+      camera.lookAt(_look);
+      if (!RM) {
+        // swing the whole view INTO the bend — this is what makes a corner read as a turn
+        const yawTarget = Math.max(-CAM_YAW_MAX, Math.min(CAM_YAW_MAX,
+          -curveK.v * CAM_YAW_K * (0.7 + 0.5 * speedNorm)));
+        camYaw += (yawTarget - camYaw) * (1 - Math.exp(-6 * raw));
+        camera.rotation.y += camYaw;
+        // bank into the curve; lean a touch with the slide
+        camera.rotation.z += -curveK.v * CAM_ROLL_K + (drifting ? -vx * 0.0011 : 0);
+      }
+      fovKick = Math.max(0, fovKick - raw * 9);
+      boostFov += ((boosting ? 9 : 0) - boostFov) * (1 - Math.exp(-6 * raw));
+      camera.fov = 62 + 26 * speedNorm + fovKick + boostFov;
+    }
+    camera.updateProjectionMatrix();
+  }
+
+  /* streetlight pools breathe on the intro screen */
+  function updateAmbient(raw) {
+    if (state !== 'intro') return;
+    for (let i = 0; i < world.lampPools.length; i++) {
+      const l = world.lampPools[i];
+      const b = 0.5 + Math.sin(clockT * 1.4 + i * 1.7) * 0.12;
+      l.pool.material.opacity = b;
+    }
+  }
+
+  /* ---------- main loop ---------- */
+  let last = performance.now();
+  function frame(nowMs) {
+    requestAnimationFrame(frame);
+    const raw = Math.min((nowMs - last) / 1000, 1 / 30);
+    last = nowMs;
+    if (paused) { renderer.render(scene, camera); return; }
+
+    const dt = raw * ts.v;
+    clockT += raw;
+    const now = nowMs / 1000;
+
+    world.curveK = curveK.v;
+
+    if (state === 'run') {
+      updateRun(dt, raw, now);
+      updatePlayer(dt, raw);
+      updateTraffic(dt);
+      updateRamps(dt);
+    } else if (state === 'starting') {
+      updatePlayer(dt, raw);
+      for (const c of active) {
+        c.z += (speed - c.speed) * dt;
+        c.group.position.z = c.z;
+      }
+    } else if (state === 'crash') {
+      updateWreck(dt);
+      for (let i = active.length - 1; i >= 0; i--) {
+        const c = active[i];
+        c.z += (speed - c.speed) * dt;
+        c.group.position.z = c.z;
+      }
+    }
+
+    if (state !== 'boot' && state !== 'intro') {
+      world.scroll(speed * dt, dt);
+      updateOncoming(dt);
+    }
+
+    updateAmbient(raw);
+    updateCamera(raw);
+    renderer.render(scene, camera);
+  }
+
+  /* ---------- boot: wait for the inks (fonts), then print ---------- */
+  const fontProbe = [
+    "120px 'Anton'", "700 40px 'Saira Condensed'",
+    "600 16px 'Barlow'", "900 40px 'Noto Sans JP'",
+  ];
+  function boot() {
+    if (state !== 'boot') return;
+    state = 'intro';
+    gsap.set(el.results, { y: 0, yPercent: 102 });   // clear the parsed CSS px offset
+    if (window.matchMedia && matchMedia('(pointer: coarse)').matches) {
+      $('#start-keys').textContent = 'hold — drive · 2 fingers — drift · 加速 — boost · in air: tap side roll / 加速 flip / 2-finger spin';
+    }
+    // paint everything that needs type (fonts are ready now)
+    player.paintLivery(1, false);
+    world.kmPosts.forEach((m) => world.paintKmPost(m, ((dist + Math.abs(m.position.z)) * KM).toFixed(1)));
+    world.gantries.forEach((g, i) => world.paintGantry(g,
+      i === 0 ? 'NEAR-MISS DRIVING CLUB' : 'EXIT: NEVER',
+      i === 0 ? 'MEMBERS ONLY — HOLD TO ENTER' : null));
+    introChoreography();
+    requestAnimationFrame(frame);
+  }
+  Promise.all(fontProbe.map((f) => document.fonts.load(f, 'ヒヤリ0123 HIYA')))
+    .then(() => document.fonts.ready)
+    .then(boot)
+    .catch(boot);
+  setTimeout(boot, 3000);   // never strand the player on a blank page
+
+  /* read-only probe + dev-only visual triggers for tests/tooling */
+  window.__HY = {
+    testStamp: (t) => {
+      const def = NEAR_TIERS[t || 0];
+      showStamp(Math.random() < 0.5 ? -1 : 1, def, 600);
+      world.stampRoad(def.jp, player.group.position.x, 2.5, { jp: true, width: 3.2 + def.mult * 1.6 });
+      inkSlap(0.1);
+    },
+    testFever: (on) => (on ? enterFever() : exitFever()),
+    testCurve: (k) => { gsap.killTweensOf(curveK); gsap.to(curveK, { v: k, duration: 2 }); },
+    testRamp: () => {
+      const r = ramps.find((x) => !x.live);
+      if (!r) return;
+      r.live = true;
+      r.lane = LANE_X.reduce((b, x, i) => (Math.abs(x - player.group.position.x) < Math.abs(LANE_X[b] - player.group.position.x) ? i : b), 0);
+      r.z = -100;
+      r.group.visible = true;
+    },
+    snap: () => ({
+      state,
+      px: player.group.position.x,
+      speed: Math.round(speed * 10) / 10,
+      combo,
+      nearMisses,
+      score: Math.floor(score),
+      boostMeter: Math.round(boostMeter),
+      boosting,
+      drifting,
+      airborne,
+      curve: curveK.v,
+      curveHard,
+      camYaw: Math.round(camYaw * 1000) / 1000,
+      driftTotal: Math.floor(driftTotal),
+      airTotal: Math.round(airTotal * 10) / 10,
+      draftCharge: Math.round(draftCharge * 100) / 100,
+      slingTimer: Math.round(slingTimer * 100) / 100,
+      overdrive,
+      overdriveTime: Math.round(overdriveTime * 10) / 10,
+      apexDrift,
+      cornerApex: Math.round(cornerApex),
+      apexClears,
+      slingshots,
+      wipeoutTimer: Math.round(wipeoutTimer * 100) / 100,
+      trick: { roll: rollAngle, flip: flipAngle, spin: spinAngle },
+      bestTrick,
+      cars: active.map((c) => ({
+        x: Math.round(c.group.position.x * 100) / 100,
+        z: Math.round(c.z * 10) / 10,
+        lane: c.lane,
+        halfW: c.halfW,
+        passed: c.passed,
+      })),
+    }),
+  };
+})();
