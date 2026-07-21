@@ -115,6 +115,34 @@
     W.paintMoon = paintMoon;
     W.bandMat = bandMat;
 
+    /* ---------- starfield: two clouds twinkling out of phase ----------
+       Screen-space point sizes (no attenuation) so they stay pin-sharp;
+       fog:false keeps them burning through the horizon haze. */
+    function starCloud(n, size, opacity) {
+      const pos = new Float32Array(n * 3);
+      for (let i = 0; i < n; i++) {
+        pos[i * 3]     = (Math.random() - 0.5) * 1000;
+        pos[i * 3 + 1] = 34 + Math.random() * 130;
+        pos[i * 3 + 2] = -344 - Math.random() * 8;
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      const mat = new THREE.PointsMaterial({
+        color: THEME.paper, size, sizeAttenuation: false,
+        transparent: true, opacity, fog: false, depthWrite: false,
+      });
+      const pts = new THREE.Points(geo, mat);
+      pts.renderOrder = -1;
+      scene.add(pts);
+      return mat;
+    }
+    const starMatA = starCloud(150, 2, 0.5);
+    const starMatB = starCloud(110, 3, 0.36);
+    W.twinkle = function (t) {
+      starMatA.opacity = 0.42 + Math.sin(t * 1.3) * 0.13;
+      starMatB.opacity = 0.30 + Math.sin(t * 1.7 + 2.1) * 0.11;
+    };
+
     /* ---------- road ---------- */
     const asphaltTex = canvasTexture(makeCanvas(256, 256, (ctx, w, h) => {
       ctx.fillStyle = css(THEME.ink);
@@ -322,6 +350,27 @@
         return m;
       });
     }
+
+    /* distant city lights beyond the oncoming lanes — scattered warm/cool
+       windows that the fog swallows into the horizon. Pure night dressing. */
+    const cityTex = canvasTexture(makeCanvas(512, 96, (ctx, w, h) => {
+      for (let i = 0; i < 300; i++) {
+        ctx.fillStyle = Math.random() < 0.72
+          ? 'rgba(255,225,170,' + (0.35 + Math.random() * 0.5).toFixed(2) + ')'
+          : 'rgba(150,200,255,' + (0.3 + Math.random() * 0.4).toFixed(2) + ')';
+        const bx = Math.random() * w, by = Math.random() * (h - 8);
+        ctx.fillRect(bx, by, 2, 2 + Math.random() * 3);
+      }
+    }), 1);
+    const cityGeo = new THREE.PlaneGeometry(60, 9);
+    cityGeo.rotateY(Math.PI / 2);   // pre-rotated: the conveyor's bendYaw owns rotation.y
+    conveyor(8, 60, () => {
+      const m = new THREE.Mesh(cityGeo, new THREE.MeshBasicMaterial({
+        map: cityTex, transparent: true, depthWrite: false, opacity: 0.85,
+      }));
+      m.position.set(-33.5, 4.5, 0);
+      return m;
+    }, null, true);
 
     /* curve chevron boards, right roadside rhythm */
     const chevTex = canvasTexture(makeCanvas(128, 96, (ctx, w, h) => {
@@ -571,6 +620,35 @@
     }), 1);
     const headGlowTex = glowTex;
 
+    // wet-asphalt light streaks: a vertical fade the road "reflects" under
+    // every light source. Bright end (gradient stop 0 = canvas top = local +Y
+    // = world −Z after the flat rotation) sits against the car.
+    function streakTex(rgb) {
+      return canvasTexture(makeCanvas(32, 128, (ctx, w, h) => {
+        const g = ctx.createLinearGradient(0, 0, 0, h);
+        g.addColorStop(0, 'rgba(' + rgb + ',0.5)');
+        g.addColorStop(1, 'rgba(' + rgb + ',0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, w, h);
+      }), 1);
+    }
+    const tailStreakTex = streakTex('232,56,13');
+    const headStreakTex = streakTex('255,232,184');
+    function addStreak(g, tex, width, len, y, z, opacity) {
+      const m = new THREE.Mesh(
+        new THREE.PlaneGeometry(width, len),
+        new THREE.MeshBasicMaterial({
+          map: tex, transparent: true, blending: THREE.AdditiveBlending,
+          depthWrite: false, opacity,
+        })
+      );
+      m.rotation.x = -Math.PI / 2;
+      m.position.set(0, y, z);
+      m.renderOrder = 3;
+      g.add(m);
+      return m;
+    }
+
     function addWheels(g, w, l, y) {
       const xs = w / 2 - 0.08, zs = l / 2 - 0.75;
       for (const [x, z] of [[-xs, -zs], [xs, -zs], [-xs, zs], [xs, zs]]) {
@@ -643,6 +721,8 @@
       }
       const rearY = type.key === 'truck' ? 1.0 : type.key === 'bus' ? 1.0 : 0.72;
       const tail = tailBar(g, type.w * 0.86, rearY, type.l / 2 - 0.02);
+      // taillights bleed onto the wet asphalt behind the car
+      addStreak(g, tailStreakTex, type.w * 0.62, 6.5, 0.032, type.l / 2 + 3.2, 0.45);
       return { group: g, tail, halfW: type.w / 2, halfL: type.l / 2, type };
     }
 
@@ -798,6 +878,89 @@
       return { group: g, halfW: HW, halfL: L / 2, height: H };
     };
 
+    /* ---------- supply crates: shoot them or drive through them ---------- */
+    const crateTex = canvasTexture(makeCanvas(128, 128, (ctx, w, h) => {
+      ctx.fillStyle = css(THEME.yellow);
+      ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = css(THEME.ink);
+      ctx.lineWidth = 10;
+      ctx.strokeRect(6, 6, w - 12, h - 12);
+      ctx.fillStyle = css(THEME.ink);
+      ctx.font = "900 62px 'Noto Sans JP'";
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('補給', w / 2, h / 2 + 2);   // "supply"
+    }), maxAniso);
+    W.buildCrate = function () {
+      const g = new THREE.Group();
+      const box = new THREE.Mesh(
+        new THREE.BoxGeometry(1.6, 1.6, 1.6),
+        new THREE.MeshLambertMaterial({ map: crateTex })
+      );
+      box.position.y = 0.8;
+      g.add(box);
+      // warm night-glow so the drop reads from deep in the fog
+      const glow = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: glowTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.55,
+      }));
+      glow.position.y = 1.0;
+      glow.scale.set(4.2, 4.2, 1);
+      g.add(glow);
+      g.visible = false;
+      scene.add(g);
+      return { group: g, box, half: 0.8 };
+    };
+
+    // shattered-crate shards, one shared pool (main drives the physics)
+    const shardMats = [
+      new THREE.MeshBasicMaterial({ color: THEME.yellow }),
+      new THREE.MeshBasicMaterial({ color: THEME.ink }),
+      new THREE.MeshBasicMaterial({ color: THEME.paper }),
+    ];
+    const shardGeoA = new THREE.BoxGeometry(0.42, 0.42, 0.42);
+    const shardGeoB = new THREE.BoxGeometry(0.26, 0.26, 0.26);
+    W.crateShards = [];
+    for (let i = 0; i < 14; i++) {
+      const m = new THREE.Mesh(i % 2 ? shardGeoA : shardGeoB, shardMats[i % 3]);
+      m.visible = false;
+      scene.add(m);
+      W.crateShards.push(m);
+    }
+
+    /* ---------- tracer bolt: the front cannon's round ---------- */
+    W.buildTracer = function () {
+      const g = new THREE.Group();
+      const bolt = new THREE.Mesh(
+        new THREE.BoxGeometry(0.2, 0.2, 3.0),
+        new THREE.MeshBasicMaterial({ color: THEME.yellow })
+      );
+      bolt.position.y = 0.6;
+      g.add(bolt);
+      const glow = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: glowTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.9,
+      }));
+      glow.position.y = 0.6;
+      glow.scale.set(2.4, 2.4, 1);
+      g.add(glow);
+      g.visible = false;
+      scene.add(g);
+      return { group: g };
+    };
+
+    /* ---------- shield aura: the one-time crash barrier ---------- */
+    W.buildShieldAura = function () {
+      // arc < 2π: the gap breaks the ring's symmetry so its spin actually reads
+      const geo = new THREE.TorusGeometry(2.5, 0.08, 8, 48, Math.PI * 1.7);
+      geo.rotateX(Math.PI / 2);   // lie flat — caller spins rotation.y
+      const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+        color: THEME.yellow, transparent: true, opacity: 0.7,
+        blending: THREE.AdditiveBlending, depthWrite: false,
+      }));
+      m.position.y = 0.6;
+      m.visible = false;
+      return m;   // caller parents it to the player group
+    };
+
     /* ---------- drift skid ink (the road remembers your slides) ---------- */
     const SKID_COUNT = 34;
     const skidGeo = new THREE.PlaneGeometry(0.17, 1.5);
@@ -848,6 +1011,8 @@
         glow.scale.set(2.4, 2.4, 1);
         g.add(glow);
       }
+      // headlights smear down the wet lane ahead of the silhouette
+      addStreak(g, headStreakTex, 1.7, 8, 0.03, 2.3 + 4, 0.38);
       scene.add(g);
       return g;
     }

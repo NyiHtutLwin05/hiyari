@@ -1,7 +1,10 @@
+<!DOCTYPE html>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="description" content="HIYARI (ヒヤリ) — a near-miss driving game. Weave through expressway traffic; every close call is printed on the asphalt.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='28' fill='none' stroke='%23E8380D' stroke-width='5'/%3E%3Ctext x='32' y='44' font-family='sans-serif' font-weight='900' font-size='34' fill='%23E8380D' text-anchor='middle'%3E走%3C/text%3E%3C/svg%3E">
 <title>HIYARI — Almost is everything.</title>
 <style>
-/* HIYARI embedded fonts — all OFL (Google Fonts): Anton, Saira Condensed, Barlow, Noto Sans JP (subset) */
 @font-face {
   font-family: 'Anton';
   font-style: normal;
@@ -55,7 +58,7 @@
   font-style: normal;
   font-weight: 900;
   font-display: block;
-  src: url(data:font/woff2;base64,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) format('woff2');
+  src: url(data:font/woff2;base64,d09GMgABAAAAABeoABAAAAAAKaQAABdKAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAG4gwHIFSBmA/U1RBVCoAgjERCAq7CLAsC2AAATYCJANoBCAFhFwHIBckGGAb0iKHiJrUA5mqqqkJhB2uakREdF3XBSLRnchkd6FS3Y1Odw8m0/2wWO6XzXZ/HI7753Ld8fzPPTu/F5PRUB4yVDbGZ4yBoacLz8P93vM6fkT6XzRgawbQANdCUxrZ9Ylx/hvAtETE3ULR9YW6UufflH6HIpxgJONZsaYbQFbAQrFNHFKJ1QtVIBuXqWKjyurKllVlNB3O5TW5fi9tHhiF+pEiVoSKwBILOWFYqVmUE26+F2trh2uI60ZMm1lyaxCKhUxphH6doV3F3vMnm5zL9IFSuKqRB9ZAwgAlfeShInQkH9KMkCTayfm5HepMxc8nBcj0Zd6ANwI9EG9FeY06PjGMJcXqsvbv19rfw3fnugrmlvDIUMUS0bJ4PE+I+JPpSGRgnNqDdYOVrBAj0R4BDYzTsS1ZSVAS21yhKMTVJZ2MUFKID+kT4/IJJ3IA2yqhUFihuLxd58S4fIEzkEAkANWKxPXdEjgxLl9ClBNHJ7GJrnNIoKLT7ifG5RNM4MhGKS3tvs1tcbdmlwKNjKuD+AIQ4XUiEUkja+1NpIk4bl7dmkkjcolPZEZjnYlx+aQ3J4kVUFqdr5vpb3F9S/DAODVHH6KTxAYrfWCcTsqGQ5H/RHYwiqEpP5QnhbRPrKudfqQfVpIqwNABxO+sxND+3vsCB8FVFWTby1sEQ9HIOM/mKkZB6a53EuJDeoQio+r3BKd4T4zLd7QxskFpkb6uEBXi3NUkAmKt7ZsgKo1oZp3E9A+NkKBSCpkhRCI+/RoCD/w47P2BVJKbkNbItL54qMsnTozLtzOJwU5z3C1vmfFXF8qSERr//7Vvdd6aJBEFD2XFQoGk0ftw5yFv7rwVlzfo/I+YJA5x41bwwSVtQrxp3ky00sUiIQRC71Qay1pqhMJ2976QZsBivCju554FCuA6UME8eDxf3O//Gtyf1Tr3t+aPu9cs7lF7ctN5aRJC8tR4IOgYD21NqbvGljxtbeHT1+Q9dw0umKBpjPoCBFNHFEGGgVrap6arr9e48ss/9DjA4I831/L0t28GbFT6XBYeJblDOmutyTecytjNI4K5gQPpOnT1jEzNLCwtmaLa3dxDfbKR9qV83kaG9VuOSNlMJ5Y/fvAbFlWuzD+B/jsGxiZmJCfa7ewik2dI5BECNPqG5lQOrfPOuSytIsbtF1jxOeBxxsJcYK7FUoAtw2BNLGxcgZAHGdptdAZqw0a4xIB60aco8gipPeRTNnBENIlxOlPeIJFffvA+i/DwSQAfUKgr5gs4xdRanfNUKBe0Jj2UNqQ84x+aDMmMAvLDiw0nRDxsWU+8UDcof+7yxXlspg03cfNlAS2ZwDwj6GQFwyyik150M4hQOpDLFNpZgIpOiyEYG7OZmnMsLfk4QGNDn49CUBGGfPFpJwmX+G2wKzBHdl5cKEcc4y332MxAinGyidHscI/nnOck23nDfg6wkCmW+MdZDjOTI/a1/VKdGNobNAgY1qvMudQL7dCkyDz3oCxmb4B/9ESRmQojSCMOL/QK6lwU0GEH5+6uTArE9Avo029gTUmwmSSwE8svoIEGMSAqsDk9BzGlQJ9S4DRJcrTeLSUYyj/x9iN1y3mqGJttzDoQuoXO8hrkCWJ+4d7GVgzC+KcpoZxBd2ulrk/HIAcHxCGBZDzrM8gih3zUQWRjRVMWbZ2VMbClFwicx2ISWj7skCv7KFiIKiD/Jk6SkBW7YlMA6F3FUqbRYqXymFHaMJ6bgLrj0mewXlTf6y13pJM5RJE4jvON6QEAL5REk69ol+tZnP3eDzRoGAwULKwiwPZn57ZYRAHaQHHxE60wBDOcq1cwo2yLc2ADQM8b2oy5N5wRDBgIAgb2nEYGF5iMAJYygKUrgOUhOO3HYx0xgNsNp4d4KcKHLm9A2+judTLSxxM8xWt8xCd8xQ/8w38cZYPZveKgFulleleD4TrOMAerY435r7ITYkY8IOELvj/i/+t5Qh2qU4Ii5CcfeclBZhK9/Z0OTzunz+PluN43b39uH7culuM+Ya2NZ0K9+Q+cDdZtyLT07iTu3a0eW+JqfwPVbstnz1A5RLZC7WlcSiCBGbpcA9FAVtvi5UJQkXPOLZKEV+NAh3TLqNTFNun3CpHBW1ELUUDdEIsidoPLGidENyJaEBEp7kBM2REFF60yGRfpwhJSCCWiS+4rYwORQYj2xLeNv97Kj+grU5lXQ+RAhxB51bJQun6Y+Oz1Us0m9GrlhFTUCJESHeMCnmV9Vt7vCTaKwQx/WCnnJeXih8Zhkqy/Cv8tmJhcQS3dDNyQZPeEQTcvk7oi44FxAQV47e1sSwuFJtYwvJ/B7B8oXI6E+dKSlt0vYnfgpaf4M/n+SVanmbVwoLj5UTQYPJT50L7Dp1YiK09vpS3qD/sNSgN2wKwga7qADoTQJ+byq/3sTvlaft6AGN1h2TrcLAQ7GWI9PQaMyf4HzHxz607ptFlt8oXfoJOeySvShmxulWDBB2HZksx2FFlrDzQLAMO0gAR8x+OTRKRLkhHROBfpLNGUPONZFcVJ663WYrl8CHkj58vyJJI5GuwDyMNQ9UWSvx9GZ6ea8sTM2UtP+WgfHPsCoMLtVnJipWTWRtr19jwv4Zp78i1taebKnjwMCwfTsFB+FN3VOkTqmTSTZP/mwFIcKl7XY3SExy3aho6OINTvmK02CLrOSbVi/TEWeO3r6kpfLyChAy/dRcelGL20pH0m3WRV1Ox6xJwLyMBQVrw29w0U+/Sa2aS9mg8yIN5Hv4+ZtnCAgfQno8GgLQ97+pwcYiQoXQpIgnCVwXDogtFs+ty8kKmtG1jguKnJUSoKTwJQM5WCcF0SFFC66MmtC8JVBQW0coDkcRpQgwrs0GIs4P8lNcPL5+b3syjFLSxg3qQRaenGcP4fCB30dPPCHa0rTMFI8HuQ0wIjWcuAh0bMx/pODoSdH1VJ4VZsksoMaVkocV7AVqB9/Nz8fmD5Dfyh97HLsj5xgKTBSMBHzPXoAzraOEAqOUDq0AdAS+x088KV5M69WB00MKnKS3R9InZGjtd1m6jLb2cKVWDhFMSBHeCQ7ckcIJ+4aIkEC9qGe1NAbd2Y5H60DprEsd0+Kk2gkQ5Qb/RgYyVIY57JSTVPnSMJhkInijgUzK30fjKpCD0DVFDSHWVQzqeKcCNXqhgKaldkeSszc4eIPM8F4UrhAEEZ0YF3QxFUgVlauUgNxjy0fKwnjgXzf6MYO91UJWdXx2WIAl0QgQIrYIfdnzYe/Rd3Q8EaeD0/5k1t8Q0rC+ent+9laSgUBTAuBHUJdcqKAJihDUY8io5Md+tgVEVd9utLQRUArCSay9ZJ/XmLYwqZASZlAzsPkLma+Lr1eQGd8X60LUMOPuN8u7Ty8RFbRz8/B4CayRVUrlRBuJJgOJg/e9RQz6a6Bm3dK4i51SKtrruUrBWVV+EVz2qNU7Ta1SsokT5rza84t8lJlymbvxs/I8ZJqSi50qxtjkNJ6R13y5RnUux2yEyDP9Xd0l52t3TTjKdpyG5ibRVcjQRuO5/U5a2mHG1q/g8h1RNrBUsGEsgqkckX78YClo7utVd4NT/St9NxPe1zSiNCOVJN3mjtrKliVBZGo7+NU5KnIoZLq22DYmDnnWZE7cosj8OVdou/E+tp+7X8Lhkeki+2m0JyJ+Ouv7uYZNykFRP0w5n0Xr0xF9VpvM9PSSooy83bvJG3eTO3oAzA31hWTvlbT2rh/8RT+83/60pShjlhAT0YHAjNfx565Tc6rqc9O3kXcX3kbpXVWlsqnPZ4lr7/rMIzo8ddV2gQ/1+v3v+pUi7q3++2BuvrckdriYeRvw2LGSyuWmYE4dlL9b+aGuhkjDi8u4kD4GEWQr03zoYIyFdUg2ZILMxIqI68xGTqAZBYSQHsdXCrNZqLge7CRgi988mjEzKtF5pa+Y93RjDFZd4CcaZHBZKbgio2GsOvVzhjYVSDzSMFEuicAnAiAAXpBem++jyoPWCJrWDE6YfT8zP8AFhCAODBr5BX/sFpkUq4yVQtS+9clhJJCsVUAS7/v6if+7W054lT1W3lq/hlr4olc32t3DlBR9KRfoN/DKhy48CMdhV7VGKy2Ce4tSOAFDA5ChQmCMIqju23WS1w36kkgBiId/vdMv8pPEnBeL+1G3IYWQErbT5TnfPq6EwpowVp7X6rlyT+K5wNz3LW3y+rQcR7tbNB8Sv2dwrakqyQDQAIrvCECGdd7vd/phlSHiKXVcpVv7iCtZV6YAXXVwFiUUu4WiBLU9IiHbQJBDUsS4cUYI2oYLTzxgpC3wqzwpYOy7g8bB4qQIpXofR3r667fmac0Xgu6nuWon658+kux4axoazQn4fm+OZsH1jPLA+Yssb7hn6ofaH5PpoeryBfO32prYxx4PuXRICr7VycrXjq2qIoKX1D8PBmXAsnNTa7vn49668X3Sz5X+ngYDKOOYZxvqn/Z3A6Qsurq5/lVbFlzEpqHrS8QDL9G59QCrZaPARQYll53CpuDaeUkdk0h2zxL8HMcfYpTtEvqxFjskvz0GsIG0epo9czSmlJpDzl0PvC+2kQk02sotZQC8lxeD8pehegEZOgEiE3zIsTTajlZ6rZn4KijQLlrsVVQYQGk9ORf4IbFqrHjXNjCPWkdARIwMbq2jjaGRLIUvASzkAnGOwcrXWxOC4JEPVgePEAGfyggOAAD0uqyAaasC5wgvCpTo+A4AB3njoG/ApImg4ilovZHe2+rb3ODVjtyMYIgJUc2GnWbvv7SYN5nNjuM/ejAnEaxqZ9NmbnvDaIWkWs2IWLjaTLhT69XSIrnDuZxR1N7wZk1HyMfThm8prz3o+aVdonEsdaN/7GAQw+AjQGe0K24sMX1Uld+W8CPC2ct3aGQ/tL8lF28B7IAajner9zGE7gf4a2XW6DzirWprWUPYRaAOwBZOCY2sMhrunrxlzw8SCfbCnjlR1wESIVFRGCNX3mynTmHsDdMl9niQVaoaUlR7n4CAX+7iVseF5rntjBCVAFSKLhIa2laTssFd41OkWDIQpQUJRXoZbA0KcuKT2sZrKxHDORr1qkeyUoCVaMhToIAOrx2eZZUv3V4JXIuINGSDFciulFrqx/oO691dqBu+1OHH0x+X99r9rqtfB/VKPeNuAh8ag7n97veDS8WSX9n82726LRdJf9w1m0SjQgVgZ9Jed9qbueBkfpzdgN6Nluk2ajaZ2SlQIFO7Lz+vGjax1bbeh6Sz6YLlEnWD+CN/LkyW4mbV/nimVoBX3eEugdz7f/wFR2mJQPyuVK8YXHkAlVIK7M0rf27je8gc4JKimpCZWrynF/lSNa7DLfgioVLDiK6YvhAnidfD221S/b3RomkiSSwu0yYQZ22CU8GUKAk4rqsfmto5mjvMHk1/ECdb9yQur4eEwtDoivDdYCCn/0sbKWW+Vb++L5+Hnadfw87b10i6fPa8hrEmuhbnysDCmFIOXFeufHGV+vPKv2u1toebS3akkikdFwlaU3U9X2l6KQM+z0W1/MVfGsB3FKXVvWNs424BtVdfMNPOXGjjk6IdTE6pfXVGyQiCI5dKWqW2fc0uBkOhWOu83jfK3+i0OwqdIojoCH1tXn0H3qe5jSm/lc7ejaosud4evqtJjCOsCbJ3d4EEhmR7o6xUnnE0MEk6aOH1+v9tsiPZvXy5r0RaaL+PGRI72RTIvivvGWxbmeFsLG56zpLbGZSEhVmE1oO9ptyf/JMsyTNoL4QGfNW3nJu3OlVNwM9NgNmIKMwdPihG+tny2gLkAz8DkD3CPF/Amo1ka1gsKS8FabSBcPi3cFNHVOe9q12U8br3JPXR5ihjx3o0Of9rtBWyy0N74+ZGenB+6bcl5uksR1lLcZsylFF7HPfx9k/j9Lz8zmFTClbq0/zOaEPa2d5prc+g3TyCSMwdi+P/5kZ6fSgz+qoZu3FCiXAf5RCr/6JgHLF8o++p+JF5k58/Gpb2YSt5Lc/u4c0gLqT5m8JwVh1IDpa7J+sCzL725hPztxrhN2fbcw6g2tbU3kWemqZg371zRWu4Wzk6kMA9vX0oDyyEXZiZuVCvPwMhHIblWl7fXI4EEGezlhZ7K9J2YaFglkmTbkYABI4ByDvne6/P2YFaYObiVDmW3OEM5WnKIUqI21vME2HeMCmQp3ok/ZK3by1cbhkS55dNg01Zph4pIwHVE/vbB/Qx+sWIk5XzsquRerzQwgztp+gNofkBgUHWjJRYZ69EaFQTiuTFBUkCUQjLcFrMSo4xO3QDOkOD5fXlZnY1eVx5XogI0ne/h7eLsbzuO97JkQ3GbdwF+GswXJ918E82PYbFBUkAWADHXrjQodcYBMYHSQJRCM0wWsxKjjky5AE1Icvy8PmbOxq8rjSnLA+pOdxFjhYyFtEHsnU6lzlRhk9wLCoFAvVOYt7hja7N6IKf0OrTBtiDYEo+cp+T/HlNsOZzm3RckgsmCliiv9KXmI9lAGlBfUxbzXDKm++EEOD+mzi5NcvPpbFOBQ8FxQ1PNmoeoFivNhC2OlBlgxTnQFwcq1TG4fG+7T4//Ra06cOk4V8rmn+uKHaxMU0aen+IC4IQhOzcRPtLy0DOB1dCPCw0KaU3JSAxjU7bNbJmEkIqNYP/H+8DmOnUYIzaLQP25CJNhNXC0oSvejIrASYUP50yPolFQlyv0E3Tbxdwu2OglFjaJKbAHMC9navNcMqv/5gQ5Q+uz8IBevehQHOmyJbREeFtKckpMawBC/LInTx2b2iUVunU3L5jKfM56KFEz1xVnzhuzo5BdRJD8bRXFEJER7s7jecNX85+MnEmeMjo9woaAokUBp4QmdVMpSNJ3lgZsXx9nZpBnV/gv97F3XHvgHSfCZWrR27dDS8iZFKzHPrzboth7RZaHV/kQUM8JtEQ6IhgRdnPzQ8mf+YRUqTvXI8U6G1g1T0B1r7uwnpdGHOaOcbnaSltVOn+eul15inZZmDLLa6VGKFm6+AnAnYFCKVOgKFoSow+KcgefhZ8Y6Sm3Q0Gajjtoujj3DYU5zYdSfwzRX4bFAEh/GdfVyt6KiafAZ3JqNFLh7uZgT4Tg0oL1Bi7yDQMzPkYUHBqq4IR9GBzwrwil8Q0DUy5YGB3wYHomNV3omq1yRAAfZazIJf+mpqm0r/eWkMpe1Naff0et3U3uDN3Pnm4ePfSd3BkffZ7N+i7t7qwNPhMznZ4lO7K88PmaH345qp1nyvuFqh/Gnctuzdi24tnf0jn+XO1/Sp8HOtnlOR0XHcvW+oblMRWfCPPOMOVT61JBzV8wbSVs8RFyXzOuE3wLGzvf/tf8BpksIGe/+xonjgqAAAZZ8u1H37sCiYXXZjyuVEz/Qny90TwILZIbaQL9rpCb/3QMAihd/oH/76OZ/KmJLS74Bmr34ijmKX9C/b/A7oJPHqjAPSWJJm3MWGVDAc0yOFDpVVNDHSxQabzhUjQc6JcM3UBhS5o7lnAPm6KdWE3P0Sjrtcg3LkRXUysdlCkYGjXKl5PPKdRGxixJYhUyiJFARalGSBHldX+p2lDQNOqNkMJMQqYIXmhoaHOQKOdNQtwsRujVo0iWnRYc27YZnvYf1M3JVZp2aDOrQb1gw6acMN9tNqtWgNjKpvMKi+gzD4FMa9BoSFCfBJlkctLv9Pr3oPEi5kVOTiKNkUmeNTbfYqLZ17y3lTkEP+mYNurQYzN+qxbgWDOYNR+ZDQ0tOhXrswrk5xZgCJMnyNiOH2YOG2XSNdJ2Y3s5XSRBCuZzCHWyYUlvShWvWpzHEjdkxir2Taqny2yilffoeMvacmOnVUQ9IDwiHuGsd1aJZYQxDZLg9RYMedDNbmfqMGNQEjCc0yWaW+38pX+VYFGqIL/+YGPH79/4nXWnrZAJeBECyzcD/BaDdntAilcMWemSAM4U0nqqhRfTRx44+eliyoHN4fwyQQoZhl5xTIGoXayW0WUOTMA1ySGgCAAA=) format('woff2');
 }
 /* ============================================================
    HIYARI — poster design system
@@ -203,6 +206,107 @@ button {
   color: var(--paper);
 }
 
+/* boost ink — earned by near-misses, spent holding up */
+#boost-block { margin-top: 10px; }
+#boost-gauge {
+  position: relative;
+  height: 5px;
+  width: min(17vw, 180px);
+  margin-left: auto;
+  background: color-mix(in srgb, var(--paper) 16%, transparent);
+}
+/* two stacked fills: draft (yellow) charges underneath, boost (shu) spends on top */
+#boost-fill, #draft-charge {
+  position: absolute;
+  inset: 0;
+  transform: scaleX(0);
+  transform-origin: right center;
+}
+#boost-fill  { background: var(--shu); }
+#draft-charge { background: var(--yellow); opacity: 0.85; }
+#boost-label {
+  margin-top: 5px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.26em;
+  color: color-mix(in srgb, var(--paper) 55%, transparent);
+}
+#boost-label [lang="ja"] { font-family: var(--f-jp); font-size: 9px; }
+
+/* overdrive: a text pill under the speed cluster — never colour-only.
+   absolutely placed just below the cluster so it reserves no space when idle */
+#overdrive-tag {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  padding: 4px 10px 3px;
+  background: var(--shu);
+  color: var(--paper);
+  font-family: var(--f-display);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  white-space: nowrap;
+  transform: rotate(-2deg);
+  transform-origin: right center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+#overdrive-tag [lang="ja"], #overdrive-tag:lang(ja) { font-family: var(--f-jp); }
+
+/* live drift ink counter, appears only mid-slide */
+#drift-live {
+  position: absolute;
+  left: var(--m);
+  bottom: calc(var(--m) + 118px);
+  font-family: var(--f-jp);
+  font-weight: 900;
+  font-size: clamp(15px, 2vw, 22px);
+  color: var(--shu);
+  opacity: 0;
+}
+#drift-live-pts {
+  font-family: var(--f-num);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--paper);
+}
+
+/* live apex ink, appears only mid-corner-drift (sits above drift-live) */
+#apex-live {
+  position: absolute;
+  left: var(--m);
+  bottom: calc(var(--m) + 150px);
+  font-family: var(--f-jp);
+  font-weight: 900;
+  font-size: clamp(15px, 2vw, 22px);
+  color: var(--yellow);
+  opacity: 0;
+}
+#apex-live-pts {
+  font-family: var(--f-num);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--paper);
+}
+
+/* mid-air trick readout, dead centre-top, air-only */
+#air-trick {
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  font-family: var(--f-jp);
+  font-weight: 900;
+  font-size: clamp(24px, 5vw, 60px);
+  line-height: 0.95;
+  color: var(--paper);
+  text-shadow: 4px 4px 0 var(--shu);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* --- combo stack, bottom-left --- */
 #combo-stack {
   position: absolute;
@@ -283,6 +387,45 @@ button {
 }
 
 /* ============ full-screen ink effects ============ */
+
+/* speed streaks — paper-white spokes from the vanishing point, clear in the
+   centre, glowing toward the edges. JS animates opacity + scale only. */
+#speed-lines {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9;
+  opacity: 0;
+  transform-origin: 50% 46%;
+  /* mix-blend-mode:screen is desktop-only (below) — on mobile a full-screen
+     blend re-reads the live canvas every frame, a real fill-rate cost */
+  background:
+    repeating-conic-gradient(from 0deg at 50% 46%,
+      rgba(242,239,229,0)    0deg,
+      rgba(242,239,229,0)    1.15deg,
+      rgba(242,239,229,0.55) 1.5deg,
+      rgba(242,239,229,0)    1.85deg,
+      rgba(242,239,229,0)    3deg);
+  -webkit-mask-image: radial-gradient(closest-side ellipse at 50% 46%, transparent 30%, #000 82%);
+  mask-image: radial-gradient(closest-side ellipse at 50% 46%, transparent 30%, #000 82%);
+  transition: opacity 0.12s linear, transform 0.12s linear;
+  will-change: opacity, transform;
+}
+/* the streaks glow on desktop where fill-rate is cheap; plain paper-white on touch */
+@media (pointer: fine) {
+  #speed-lines { mix-blend-mode: screen; }
+}
+
+/* night vignette — deepens with speed (JS drives opacity) */
+#vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 8;
+  opacity: 0;
+  background: radial-gradient(ellipse at 50% 42%, transparent 52%, rgba(8, 10, 14, 0.62) 100%);
+  transition: opacity 0.35s linear;
+}
 
 #ink-flash {
   position: fixed;
@@ -634,11 +777,15 @@ button {
 
 /* ============ mute / fallback ============ */
 
-#mute-btn {
+#audio-btns {
   position: fixed;
   right: var(--m);
   bottom: var(--m);
   z-index: 50;   /* below the results poster so it never collides with RUN IT BACK */
+  display: flex;
+  gap: 8px;
+}
+#mute-btn, #music-btn {
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.24em;
@@ -647,12 +794,312 @@ button {
   padding: 8px 12px 7px;
   transition: color 0.15s ease, border-color 0.15s ease;
 }
-#mute-btn:hover { color: var(--paper); border-color: var(--paper); }
+#mute-btn:hover, #music-btn:hover { color: var(--paper); border-color: var(--paper); }
+#music-btn.muted {
+  color: color-mix(in srgb, var(--paper) 35%, transparent);
+  border-color: color-mix(in srgb, var(--paper) 20%, transparent);
+  text-decoration: line-through;
+}
 /* a settings toggle is not a loss — muted dims, it doesn't bleed vermilion */
 #mute-btn.muted {
   color: color-mix(in srgb, var(--paper) 35%, transparent);
   border-color: color-mix(in srgb, var(--paper) 20%, transparent);
   text-decoration: line-through;
+}
+
+/* on-screen boost trigger — coarse pointers only */
+#boost-btn {
+  display: none;
+  position: fixed;
+  right: var(--m);
+  bottom: calc(var(--m) + 52px);
+  z-index: 45;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 3px solid var(--shu);
+  background: color-mix(in srgb, var(--ink) 70%, transparent);
+  color: var(--shu);
+  font-family: var(--f-jp);
+  font-weight: 900;
+  font-size: 20px;
+  transform: rotate(-8deg);
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+#boost-btn:active { background: var(--shu); color: var(--paper); }
+@media (pointer: coarse) {
+  body.playing #boost-btn { display: block; }
+}
+
+/* ============ ammo pips + shield tag (in #speed-block) ============ */
+#ammo-block { margin-top: 7px; }
+#ammo-pips {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+}
+#ammo-pips .pip {
+  width: 8px;
+  height: 13px;
+  background: color-mix(in srgb, var(--paper) 16%, transparent);
+  transform: skewX(-12deg);
+  transition: background 0.15s ease;
+}
+#ammo-pips .pip.on { background: var(--yellow); }
+#ammo-label {
+  margin-top: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-align: right;
+  color: color-mix(in srgb, var(--paper) 55%, transparent);
+}
+#ammo-label [lang="ja"] { font-family: var(--f-jp); font-size: 9px; }
+#shield-tag {
+  margin-top: 6px;
+  display: inline-block;
+  background: var(--yellow);
+  color: var(--ink);
+  font-family: var(--f-jp);
+  font-weight: 900;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  padding: 3px 8px 2px;
+  transform: rotate(-2deg);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+/* ============ turn-call banner (LEFT / RIGHT corner) ============ */
+#turn-signal {
+  position: absolute;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 12;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  pointer-events: none;
+  text-align: center;
+  will-change: opacity, transform;
+}
+#turn-arrow {
+  font-size: clamp(34px, 7vw, 68px);
+  line-height: 1;
+  color: var(--yellow);
+  text-shadow: 3px 3px 0 var(--ink);
+}
+#turn-text {
+  font-family: var(--f-display);
+  font-size: clamp(22px, 4.4vw, 46px);
+  letter-spacing: 0.06em;
+  color: var(--paper);
+  text-shadow: 3px 3px 0 var(--ink);
+}
+#turn-sub {
+  font-family: var(--f-jp);
+  font-weight: 700;
+  font-size: clamp(10px, 1.6vw, 15px);
+  letter-spacing: 0.14em;
+  color: color-mix(in srgb, var(--paper) 80%, transparent);
+}
+#turn-signal.hard #turn-arrow,
+#turn-signal.hard #turn-text { color: var(--shu); }
+
+/* ============ touch control pad (coarse pointers only) ============ */
+#touch-controls { display: none; }
+@media (pointer: coarse) {
+  body.playing #touch-controls { display: block; }   /* only while driving */
+  #touch-controls {
+    position: fixed;
+    inset: 0;
+    z-index: 44;
+    pointer-events: none;   /* only the buttons catch touches */
+  }
+  #tc-steer {
+    position: fixed;
+    left: var(--m);
+    bottom: var(--m);
+    display: flex;
+    gap: 14px;
+    pointer-events: none;
+  }
+  .tc-btn {
+    pointer-events: auto;
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--paper);
+    background: color-mix(in srgb, var(--ink) 62%, transparent);
+    border: 3px solid color-mix(in srgb, var(--paper) 80%, transparent);
+  }
+  #btn-left, #btn-right {
+    width: 74px;
+    height: 74px;
+    border-radius: 50%;
+    font-size: 30px;
+    line-height: 1;
+  }
+  #btn-left:active, #btn-right:active { background: var(--paper); color: var(--ink); }
+  #btn-drift {
+    position: fixed;
+    right: var(--m);
+    bottom: calc(var(--m) + 134px);   /* stacked above the 加速 boost dial */
+    width: 84px;
+    height: 84px;
+    border-radius: 50%;
+    border-color: var(--yellow);
+    color: var(--yellow);
+    font-family: var(--f-display);
+    letter-spacing: 0.04em;
+    transform: rotate(6deg);
+  }
+  #btn-drift .tc-cap { font-size: 17px; }
+  #btn-drift [lang="ja"] { font-family: var(--f-jp); font-size: 9px; font-weight: 700; }
+  #btn-drift:active { background: var(--yellow); color: var(--ink); }
+  #btn-fire {
+    position: fixed;
+    left: calc(var(--m) + 30px);
+    bottom: calc(var(--m) + 92px);   /* stacked above the steer pair */
+    width: 66px;
+    height: 66px;
+    border-radius: 50%;
+    border-color: var(--shu);
+    color: var(--paper);
+    font-family: var(--f-display);
+    letter-spacing: 0.04em;
+    transform: rotate(-6deg);
+  }
+  #btn-fire .tc-cap { font-size: 15px; }
+  #btn-fire [lang="ja"] { font-family: var(--f-jp); font-size: 9px; font-weight: 700; }
+  #btn-fire:active { background: var(--shu); color: var(--paper); }
+  /* lift the live drift/apex counters clear of the FIRE button's footprint */
+  #drift-live { bottom: calc(var(--m) + 172px); }
+  #apex-live  { bottom: calc(var(--m) + 204px); }
+}
+
+/* ============ how-to-play overlay ============ */
+#help-btn {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--ink);
+  background: var(--yellow);
+  border: 1px solid var(--yellow);
+  padding: 8px 12px 7px;
+}
+#help-btn:hover { filter: brightness(1.08); }
+
+#help[aria-hidden="true"] { display: none; }
+#help {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4vmin;
+  background: color-mix(in srgb, var(--ink) 82%, transparent);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+#help-card {
+  width: min(760px, 94vw);
+  max-height: 92vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: var(--ink);
+  border: 3px solid var(--paper);
+  box-shadow: 10px 10px 0 var(--shu);
+  padding: clamp(18px, 3.5vw, 34px);
+}
+#help-card header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 2px solid var(--shu);
+  padding-bottom: 10px;
+  margin-bottom: 14px;
+}
+#help-kicker {
+  font-family: var(--f-display);
+  font-size: clamp(24px, 4vw, 40px);
+  letter-spacing: 0.03em;
+  color: var(--paper);
+}
+#help-jp { font-family: var(--f-jp); font-weight: 900; font-size: clamp(18px, 3vw, 28px); color: var(--shu); }
+#help-goal {
+  font-size: clamp(13px, 1.9vw, 16px);
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--paper) 88%, transparent);
+  margin-bottom: 16px;
+}
+#help-goal b { color: var(--yellow); }
+.help-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(16px, 3vw, 34px);
+}
+.help-col h3 {
+  font-family: var(--f-num);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.16em;
+  color: var(--yellow);
+  margin-bottom: 8px;
+}
+.help-col h3.air { margin-top: 16px; color: var(--shu); }
+.help-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.help-list li { display: flex; align-items: baseline; gap: 10px; }
+.help-list .k {
+  flex: 0 0 auto;
+  min-width: 44px;
+  text-align: center;
+  font-family: var(--f-num);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+  background: var(--paper);
+  border-radius: 4px;
+  padding: 3px 7px;
+}
+.help-list .k:lang(ja), .help-list .k[lang="ja"] { font-family: var(--f-jp); }
+.help-list .k2 {
+  font-family: var(--f-num); font-weight: 700; font-size: 11px;
+  color: var(--ink); background: color-mix(in srgb, var(--paper) 82%, transparent);
+  border-radius: 3px; padding: 1px 5px;
+}
+.help-list .d {
+  font-size: clamp(12px, 1.7vw, 14px);
+  line-height: 1.4;
+  color: color-mix(in srgb, var(--paper) 84%, transparent);
+}
+.help-list .d b { color: var(--paper); }
+#help-close {
+  display: block;
+  margin: 22px auto 4px;
+  font-family: var(--f-display);
+  font-size: clamp(16px, 2.6vw, 22px);
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  background: var(--yellow);
+  border: none;
+  padding: 12px 26px 10px;
+}
+#help-close:hover { filter: brightness(1.08); }
+@media (max-width: 560px) {
+  .help-cols { grid-template-columns: 1fr; gap: 14px; }
 }
 
 #nogl[hidden] { display: none; }
@@ -686,6 +1133,9 @@ button {
   }
   #fever-band { left: 50%; transform: translateX(-50%) scaleX(0); transform-origin: center; }
   #hint { display: none; }
+  #air-trick { top: 26%; font-size: clamp(20px, 6vw, 40px); }
+  #overdrive-tag { font-size: 9px; letter-spacing: 0.12em; }
+  /* keep apex-live at its 150px base so it clears drift-live (118px) by 32px */
   #results { width: 100vw; }
   #results-card { border-left: none; border-top: 3px solid var(--paper); }
   #restart-hint { display: none; }
@@ -695,10 +1145,19 @@ button {
 
 @media (prefers-reduced-motion: reduce) {
   #restart-btn { transition: none; }
+  /* motion off: streaks become a faint static vignette, tags don't ease */
+  #speed-lines { opacity: 0.10 !important; transform: none !important; transition: none; }
+  #air-trick, #overdrive-tag { transition: none; }
 }
 
 </style>
 <canvas id="scene" aria-hidden="true"></canvas>
+
+<!-- speed streaks: sibling of the HUD, below it, above the canvas -->
+<div id="speed-lines" aria-hidden="true"></div>
+
+<!-- night vignette: deepens with speed, frames the road -->
+<div id="vignette" aria-hidden="true"></div>
 
 <!-- ============ HUD (poster margin system) ============ -->
 <div id="hud" aria-hidden="true">
@@ -713,13 +1172,47 @@ button {
       <span id="speed-num">0</span><span id="speed-unit">km/h</span>
     </div>
     <div id="route-ticker"><span id="route-name">ROUTE 1 — MEISHIN</span></div>
+    <div id="overdrive-tag" lang="ja">オーバードライブ OVERDRIVE</div>
+    <div id="boost-block">
+      <div id="boost-gauge"><div id="draft-charge"></div><div id="boost-fill"></div></div>
+      <div id="boost-label">BOOST <span lang="ja">加速</span> — &#8593; &nbsp;/&nbsp; <span lang="ja">スリップ</span> DRAFT</div>
+    </div>
+    <div id="ammo-block">
+      <div id="ammo-pips"></div>
+      <div id="ammo-label">FIRE <span lang="ja">射撃</span> — F &nbsp;/&nbsp; <span lang="ja">補給</span> CRATES</div>
+    </div>
+    <div id="shield-tag" lang="ja">バリア SHIELD ARMED</div>
   </div>
 
   <div id="combo-stack"></div>
+  <div id="drift-live" lang="ja">ドリフト <span id="drift-live-pts">0</span></div>
+  <div id="apex-live" lang="ja">アペックス <span id="apex-live-pts">0</span></div>
+  <div id="air-trick" lang="ja"></div>
+  <div id="turn-signal" aria-hidden="true">
+    <span id="turn-arrow">▶</span>
+    <span id="turn-text">TURN</span>
+    <span id="turn-sub" lang="ja">ドリフトで抜ける — DRIFT TO HOLD</span>
+  </div>
   <div id="fever-band"><span>ヒヤリハット FEVER — POINTS ×2</span></div>
 
   <div id="stamps"></div>
-  <div id="hint">&#8592; &#8594; STEER &nbsp;&middot;&nbsp; SHAVE PAST CARS FOR POINTS</div>
+  <div id="hint">&#8592;&#8594; STEER &nbsp;&middot;&nbsp; SHIFT — DRIFT &nbsp;&middot;&nbsp; &#8593; — BOOST &nbsp;&middot;&nbsp; F — FIRE &nbsp;&middot;&nbsp; RAMP → AIR TRICKS &nbsp;&middot;&nbsp; PRESS <b>?</b> / HOW TO PLAY</div>
+</div>
+
+<button id="boost-btn" type="button" aria-label="Hold to boost"><span lang="ja">加速</span></button>
+
+<!-- ============ TOUCH CONTROLS (coarse pointers only) ============ -->
+<div id="touch-controls" aria-hidden="true">
+  <div id="tc-steer">
+    <button id="btn-left" class="tc-btn" type="button" aria-label="Steer left / air roll left">◀</button>
+    <button id="btn-right" class="tc-btn" type="button" aria-label="Steer right / air roll right">▶</button>
+  </div>
+  <button id="btn-drift" class="tc-btn" type="button" aria-label="Hold to drift / air spin">
+    <span class="tc-cap">DRIFT</span><span lang="ja">ドリフト</span>
+  </button>
+  <button id="btn-fire" class="tc-btn" type="button" aria-label="Fire the cannon">
+    <span class="tc-cap">FIRE</span><span lang="ja">射撃</span>
+  </button>
 </div>
 
 <div id="ink-flash"></div>
@@ -775,6 +1268,14 @@ button {
       <div class="row"><span class="lbl">NEAR MISSES</span><span class="leader"></span><span class="val" id="r-miss">0</span></div>
       <div class="row"><span class="lbl">BEST COMBO</span><span class="leader"></span><span class="val" id="r-combo">&times;1</span></div>
       <div class="row"><span class="lbl">TOP SPEED</span><span class="leader"></span><span class="val" id="r-speed">0 km/h</span></div>
+      <div class="row"><span class="lbl">DRIFT INK</span><span class="leader"></span><span class="val" id="r-drift">0</span></div>
+      <div class="row"><span class="lbl">AIR TIME</span><span class="leader"></span><span class="val" id="r-air">0.0 s</span></div>
+      <div class="row"><span class="lbl">SLINGSHOTS</span><span class="leader"></span><span class="val" id="r-sling">0</span></div>
+      <div class="row"><span class="lbl">APEX CLEARS</span><span class="leader"></span><span class="val" id="r-apex">0</span></div>
+      <div class="row"><span class="lbl">CRATES</span><span class="leader"></span><span class="val" id="r-crate">0</span></div>
+      <div class="row"><span class="lbl">BLASTED</span><span class="leader"></span><span class="val" id="r-blast">0</span></div>
+      <div class="row"><span class="lbl">BEST TRICK</span><span class="leader"></span><span class="val" id="r-trick">&times;1.0</span></div>
+      <div class="row"><span class="lbl">OVERDRIVE</span><span class="leader"></span><span class="val" id="r-od">0.0 s</span></div>
       <div class="row"><span class="lbl">FEVER TIME</span><span class="leader"></span><span class="val" id="r-fever">0.0 s</span></div>
     </div>
     <div id="score-final-rule"></div>
@@ -794,7 +1295,62 @@ button {
   </div>
 </section>
 
-<button id="mute-btn" type="button" aria-label="Toggle sound">SOUND&nbsp;ON</button>
+<div id="audio-btns">
+  <button id="help-btn" type="button" aria-label="How to play">HOW&nbsp;TO&nbsp;PLAY</button>
+  <button id="music-btn" type="button" aria-label="Toggle music">MUSIC&nbsp;ON</button>
+  <button id="mute-btn" type="button" aria-label="Toggle sound">SOUND&nbsp;ON</button>
+</div>
+
+<!-- ============ HOW TO PLAY ============ -->
+<section id="help" aria-hidden="true">
+  <div id="help-card">
+    <header>
+      <span id="help-kicker">HOW TO PLAY</span>
+      <span id="help-jp" lang="ja">操作方法</span>
+    </header>
+    <p id="help-goal">Weave through traffic. Every near-miss is inked on the road and scores. Chain them for combos, hit <b>×8</b> for FEVER. Don't crash.</p>
+
+    <div class="help-cols">
+      <div class="help-col">
+        <h3>⌨︎ KEYBOARD</h3>
+        <ul class="help-list">
+          <li><span class="k">◀ ▶</span><span class="d">Steer left / right (<b>A</b> / <b>D</b>)</span></li>
+          <li><span class="k">▲</span><span class="d">Boost (<b>W</b>) — spends the BOOST gauge</span></li>
+          <li><span class="k">SHIFT</span><span class="d">Drift — hold while steering (or <b>SPACE</b>)</span></li>
+          <li><span class="k">F</span><span class="d">Fire the cannon — clears a car, spends 1 ammo</span></li>
+          <li><span class="k">P</span><span class="d">Pause · <span class="k2">M</span> mute · <span class="k2">R</span> restart</span></li>
+        </ul>
+        <h3 class="air">✈ IN THE AIR (after a ramp)</h3>
+        <ul class="help-list">
+          <li><span class="k">◀ ▶</span><span class="d">Barrel roll</span></li>
+          <li><span class="k">▲</span><span class="d">Front flip</span></li>
+          <li><span class="k">SHIFT</span><span class="d">Spin — land clean for big points</span></li>
+        </ul>
+      </div>
+
+      <div class="help-col">
+        <h3>▤ TOUCH / MOBILE</h3>
+        <ul class="help-list">
+          <li><span class="k">◀ ▶</span><span class="d">Bottom-left buttons — steer</span></li>
+          <li><span class="k">加速</span><span class="d">Bottom-right red button — boost</span></li>
+          <li><span class="k">DRIFT</span><span class="d">Hold the DRIFT button while steering</span></li>
+          <li><span class="k">FIRE</span><span class="d">Above the steer buttons — one shot per tap</span></li>
+        </ul>
+        <h3 class="air">✈ IN THE AIR (mobile)</h3>
+        <ul class="help-list">
+          <li><span class="k">◀ ▶</span><span class="d">Roll · <span class="k2">加速</span> flip · <span class="k2">DRIFT</span> spin</span></li>
+        </ul>
+        <h3 class="air">↩ CORNERS &amp; SUPPLIES</h3>
+        <ul class="help-list">
+          <li><span class="d">When <b>TURN LEFT / RIGHT</b> flashes, steer that way — <b>hold DRIFT through the apex</b> for triple ink.</span></li>
+          <li><span class="d">Yellow <b>補給 crates</b> hold <b>AMMO</b> or a <b>SHIELD</b> — shoot them or drive through. The shield blocks <b>one</b> crash.</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <button id="help-close" type="button">GOT IT — DRIVE</button>
+  </div>
+</section>
 
 <div id="nogl" hidden>
   <p>HIYARI needs WebGL to print its world.<br>Your browser said no. Try another one.</p>
@@ -833,10 +1389,23 @@ button {
 (function () {
   'use strict';
 
-  // ── ALL SOUND DISABLED (user request, 2026-07-16) ────────────────
-  // Flip to false to restore the full procedural soundtrack. Keep in
-  // sync with js/audio.js.
-  const AUDIO_DISABLED = true;
+  // ── RACING SFX ENABLED (user request, 2026-07-19) ────────────────
+  // Earlier the engine + wind + screech + boost beds + the procedural
+  // MUSIC all stacked into "too much noise", so everything was killed.
+  // It's back on now, but rebalanced as *sound effects, not music*:
+  //   • the wind / boost / screech beds are pulled WAY down (see the
+  //     BED_* mix constants below) so they colour the drive instead of
+  //     drowning it;
+  //   • the engine is the hero — it revs cleanly with speed;
+  //   • MUSIC now defaults OFF (main.js) so a fresh player hears pure
+  //     racing SFX. The MUSIC button still brings the beat back if
+  //     wanted. Flip AUDIO_DISABLED to true to silence everything.
+  const AUDIO_DISABLED = false;
+
+  // bed mix — the constant "hiss" layers, kept low so SFX read clean
+  const BED_WIND   = 0.14;   // was 0.34 — wind roar at top speed
+  const BED_BOOST  = 0.15;   // was 0.26 — boost turbine layer
+  const BED_SCREECH = 0.17;  // was 0.20 — tyre screech ceiling
 
   const PENTA = [261.63, 293.66, 329.63, 392.0, 440.0]; // C D E G A
 
@@ -936,7 +1505,225 @@ button {
       this.feverGain.connect(this.master);
       f1.start(); f2.start();
 
+      // --- drift screech: looped noise, shaped per frame ---
+      this.screechSrc = ctx.createBufferSource();
+      this.screechSrc.buffer = this.noiseBuf;
+      this.screechSrc.loop = true;
+      this.screechBp = ctx.createBiquadFilter();
+      this.screechBp.type = 'bandpass';
+      this.screechBp.frequency.value = 1050;
+      this.screechBp.Q.value = 2.2;
+      this.screechGain = ctx.createGain();
+      this.screechGain.gain.value = 0;
+      this.screechSrc.connect(this.screechBp);
+      this.screechBp.connect(this.screechGain);
+      this.screechGain.connect(this.master);
+      this.screechSrc.start();
+
+      // --- boost roar layer ---
+      this.boostSrc = ctx.createBufferSource();
+      this.boostSrc.buffer = this.noiseBuf;
+      this.boostSrc.loop = true;
+      this.boostBp = ctx.createBiquadFilter();
+      this.boostBp.type = 'bandpass';
+      this.boostBp.frequency.value = 520;
+      this.boostBp.Q.value = 0.8;
+      this.boostGain = ctx.createGain();
+      this.boostGain.gain.value = 0;
+      this.boostSrc.connect(this.boostBp);
+      this.boostBp.connect(this.boostGain);
+      this.boostGain.connect(this.master);
+      this.boostSrc.start();
+
+      // --- music bus ---
+      this.musicGain = ctx.createGain();
+      this.musicGain.gain.value = 0;
+      this.musicGain.connect(this.master);
+      this.musicOn = this._musicPref !== false;
+      this._mode = 'off';
+      this._step = 0;
+      this._bar = 0;
+      this._nextT = 0;
+
       this.ok = true;
+    }
+
+    /* ============================================================
+       MUSIC — an original Tokyo-street-racing homage, synthesized.
+       Hirajoshi-flavored bass and shamisen-style plucks over an
+       808 hip-hop pattern. No samples, no copyrighted material.
+       ============================================================ */
+
+    musicSet(mode) {
+      this._mode = mode;
+      if (!this.ok) return;
+      const on = this.musicOn && mode !== 'off';
+      this.musicGain.gain.setTargetAtTime(on ? 0.34 : 0, this.ctx.currentTime, 0.4);
+      if (on && !this._timer) {
+        this._nextT = this.ctx.currentTime + 0.06;
+        this._step = 0;
+        this._bar = 0;
+        this._timer = setInterval(() => this._musicTick(), 40);
+      }
+    }
+
+    setMusicOn(on) {
+      this.musicOn = on;
+      this._musicPref = on;
+      if (this.ok) this.musicSet(this._mode);
+    }
+
+    _musicTick() {
+      if (!this.ok) return;
+      const ahead = this.ctx.currentTime + 0.14;
+      while (this._nextT < ahead) {
+        this._scheduleStep(this._step, this._bar, this._nextT);
+        const bpm = this._mode === 'fever' ? 106 : 96;
+        this._nextT += 60 / bpm / 4;
+        this._step = (this._step + 1) % 16;
+        if (this._step === 0) this._bar++;
+      }
+    }
+
+    _scheduleStep(s, bar, t) {
+      const m = this._mode;
+      if (m === 'off') return;
+      const sparse = m === 'intro' || m === 'results';
+
+      // taiko heartbeat opens every 4th bar
+      if (s === 0 && bar % 4 === 0) this._taiko(t);
+
+      if (!sparse) {
+        const kicks = m === 'fever' ? [0, 4, 8, 12] : [0, 7, 10];
+        if (kicks.includes(s)) this._kick(t);
+        if (s === 4 || s === 12) this._snare(t);
+        const hatEvery = m === 'fever' ? 1 : 2;
+        if (s % hatEvery === 0) this._hat(t, s === 14);
+        // bass riff on A1 hirajoshi (A B C E F)
+        const riff = { 0: 55, 3: 55, 6: 65.41, 8: 55, 11: 87.31, 14: 82.41 };
+        if (riff[s]) this._bass(t, riff[s] * (m === 'fever' ? 2 : 1));
+      }
+
+      // shamisen-style pluck motif every other bar
+      if (bar % 2 === 0) {
+        const motif = sparse
+          ? { 0: 440, 6: 523.25, 12: 493.88 }
+          : { 0: 440, 2: 523.25, 4: 493.88, 8: 440, 12: 329.63 };
+        if (motif[s]) this._pluck(t, motif[s]);
+      }
+    }
+
+    _kick(t) {
+      const ctx = this.ctx;
+      const o = ctx.createOscillator();
+      o.frequency.setValueAtTime(118, t);
+      o.frequency.exponentialRampToValueAtTime(44, t + 0.11);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.85, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+      o.connect(g); g.connect(this.musicGain);
+      o.start(t); o.stop(t + 0.18);
+    }
+
+    _snare(t) {
+      const ctx = this.ctx;
+      const src = ctx.createBufferSource();
+      src.buffer = this.noiseBuf;
+      src.start(t, Math.random(), 0.14);
+      const bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass'; bp.frequency.value = 1900; bp.Q.value = 0.9;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.3, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.13);
+      src.connect(bp); bp.connect(g); g.connect(this.musicGain);
+    }
+
+    _hat(t, open) {
+      const ctx = this.ctx;
+      const src = ctx.createBufferSource();
+      src.buffer = this.noiseBuf;
+      src.start(t, Math.random(), open ? 0.14 : 0.035);
+      const hp = ctx.createBiquadFilter();
+      hp.type = 'highpass'; hp.frequency.value = 7200;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(open ? 0.11 : 0.085, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + (open ? 0.13 : 0.04));
+      src.connect(hp); hp.connect(g); g.connect(this.musicGain);
+    }
+
+    _bass(t, f) {
+      const ctx = this.ctx;
+      const o1 = ctx.createOscillator(); o1.type = 'sawtooth'; o1.frequency.value = f;
+      const o2 = ctx.createOscillator(); o2.type = 'square'; o2.frequency.value = f;
+      const lp = ctx.createBiquadFilter();
+      lp.type = 'lowpass'; lp.frequency.value = 310;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.24, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.21);
+      o1.connect(lp); o2.connect(lp); lp.connect(g); g.connect(this.musicGain);
+      o1.start(t); o2.start(t); o1.stop(t + 0.24); o2.stop(t + 0.24);
+    }
+
+    /* Karplus-Strong-ish pluck: noise burst into a tuned feedback delay */
+    _pluck(t, f) {
+      const ctx = this.ctx;
+      const src = ctx.createBufferSource();
+      src.buffer = this.noiseBuf;
+      src.start(t, Math.random(), 0.008);
+      const delay = ctx.createDelay(0.05);
+      delay.delayTime.value = 1 / f;
+      const fb = ctx.createGain(); fb.gain.value = 0.91;
+      const damp = ctx.createBiquadFilter();
+      damp.type = 'lowpass'; damp.frequency.value = 3400;
+      const out = ctx.createGain();
+      out.gain.setValueAtTime(0.34, t);
+      out.gain.exponentialRampToValueAtTime(0.001, t + 0.85);
+      src.connect(delay);
+      delay.connect(damp); damp.connect(fb); fb.connect(delay);
+      delay.connect(out); out.connect(this.musicGain);
+      setTimeout(() => { try { fb.gain.value = 0; } catch (e) {} }, 1200);
+    }
+
+    _taiko(t) {
+      const ctx = this.ctx;
+      const o = ctx.createOscillator();
+      o.frequency.setValueAtTime(72, t);
+      o.frequency.exponentialRampToValueAtTime(37, t + 0.35);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.7, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.45);
+      o.connect(g); g.connect(this.musicGain);
+      o.start(t); o.stop(t + 0.5);
+      const src = ctx.createBufferSource();
+      src.buffer = this.noiseBuf;
+      src.start(t, Math.random(), 0.09);
+      const lp = ctx.createBiquadFilter();
+      lp.type = 'lowpass'; lp.frequency.value = 420;
+      const ng = ctx.createGain();
+      ng.gain.setValueAtTime(0.3, t);
+      ng.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+      src.connect(lp); lp.connect(ng); ng.connect(this.master);
+    }
+
+    /* drift screech intensity 0..1, called per frame */
+    setDrift(i) {
+      if (!this.ok) return;
+      const t = this.ctx.currentTime;
+      this.screechGain.gain.setTargetAtTime(i * BED_SCREECH, t, 0.06);
+      this.screechBp.frequency.setTargetAtTime(880 + i * 520 + Math.sin(t * 13) * 60, t, 0.05);
+    }
+
+    landThump() {
+      if (!this.ok) return;
+      const ctx = this.ctx, t = ctx.currentTime;
+      const o = ctx.createOscillator();
+      o.frequency.setValueAtTime(66, t);
+      o.frequency.exponentialRampToValueAtTime(34, t + 0.16);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.7, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.19);
+      o.connect(g); g.connect(this.master);
+      o.start(t); o.stop(t + 0.22);
     }
 
     resume() { if (this.ok && this.ctx.state !== 'running') this.ctx.resume(); }
@@ -967,19 +1754,21 @@ button {
       this.engGain.gain.setTargetAtTime(0.055 + h * 0.05, t, 0.06);
     }
 
-    /* Per-frame drive parameters. speedNorm 0..1, steer -1..1, tier 0..3 */
-    setDrive(speedNorm, steer, tier) {
+    /* Per-frame drive parameters. speedNorm 0..1, steer -1..1, tier 0..3, boost 0..1 */
+    setDrive(speedNorm, steer, tier, boost) {
       if (!this.ok) return;
+      const b = boost || 0;
       const t = this.ctx.currentTime;
-      const f = 82 + speedNorm * 138 + Math.abs(steer) * 6;
+      const f = (82 + speedNorm * 138 + Math.abs(steer) * 6) * (1 + b * 0.16);
       this.osc1.frequency.setTargetAtTime(f, t, 0.08);
       this.osc2.frequency.setTargetAtTime(f, t, 0.08);
       this.tierOsc.frequency.setTargetAtTime(f * 1.5, t, 0.08);
       this.tierGain.gain.setTargetAtTime(tier * 0.008, t, 0.4);
-      this.engFilter.frequency.setTargetAtTime(400 + speedNorm * 2400, t, 0.1);
-      this.engGain.gain.setTargetAtTime(0.075 + speedNorm * 0.05, t, 0.1);
+      this.engFilter.frequency.setTargetAtTime(400 + speedNorm * 2400 + b * 900, t, 0.1);
+      this.engGain.gain.setTargetAtTime(0.075 + speedNorm * 0.05 + b * 0.02, t, 0.1);
       this.windFilter.frequency.setTargetAtTime(300 + speedNorm * 900, t, 0.15);
-      this.windGain.gain.setTargetAtTime(speedNorm * speedNorm * 0.34, t, 0.15);
+      this.windGain.gain.setTargetAtTime(speedNorm * speedNorm * BED_WIND + b * 0.06, t, 0.15);
+      this.boostGain.gain.setTargetAtTime(b * BED_BOOST, t, 0.09);
     }
 
     _burst(dur) {
@@ -1102,6 +1891,174 @@ button {
       });
     }
 
+    /* Corner-ahead call — a panned two-tone "rally note" that rises for a
+       right-hander, falls for a left-hander, so you HEAR the turn coming.
+       dir: -1 left, +1 right. hard: burns a brighter, longer tone. */
+    cornerAlert(dir, hard) {
+      if (!this.ok) return;
+      const ctx = this.ctx, t = ctx.currentTime;
+      const up = dir > 0;
+      const f0 = up ? 520 : 760;
+      const f1 = up ? 780 : 500;
+      const o = ctx.createOscillator();
+      o.type = 'triangle';
+      o.frequency.setValueAtTime(f0, t);
+      o.frequency.linearRampToValueAtTime(f1, t + 0.16);
+      const g = ctx.createGain();
+      const peak = hard ? 0.2 : 0.13;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(peak, t + 0.03);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + (hard ? 0.5 : 0.34));
+      const p = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+      o.connect(g);
+      if (p) { p.pan.value = Math.max(-0.7, Math.min(0.7, dir * 0.6)); g.connect(p); p.connect(this.master); }
+      else g.connect(this.master);
+      o.start(t); o.stop(t + (hard ? 0.55 : 0.4));
+    }
+
+    /* Front cannon: punchy square drop + high click — a pop, not a laser */
+    shoot() {
+      if (!this.ok) return;
+      const ctx = this.ctx, t = ctx.currentTime;
+      const o = ctx.createOscillator();
+      o.type = 'square';
+      o.frequency.setValueAtTime(680, t);
+      o.frequency.exponentialRampToValueAtTime(130, t + 0.1);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.2, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+      o.connect(g); g.connect(this.master);
+      o.start(t); o.stop(t + 0.13);
+      const click = this._burst(0.02);
+      const hp = ctx.createBiquadFilter();
+      hp.type = 'highpass'; hp.frequency.value = 3200;
+      const cg = ctx.createGain();
+      cg.gain.setValueAtTime(0.14, t);
+      cg.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+      click.connect(hp); hp.connect(cg); cg.connect(this.master);
+    }
+
+    /* A shot connecting with a car: small dry explosion */
+    blastHit() {
+      if (!this.ok) return;
+      const ctx = this.ctx, t = ctx.currentTime;
+      const src = this._burst(0.16);
+      const bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass'; bp.frequency.value = 750; bp.Q.value = 0.9;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.36, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+      src.connect(bp); bp.connect(g); g.connect(this.master);
+      const o = ctx.createOscillator();
+      o.frequency.setValueAtTime(95, t);
+      o.frequency.exponentialRampToValueAtTime(46, t + 0.16);
+      const og = ctx.createGain();
+      og.gain.setValueAtTime(0.5, t);
+      og.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+      o.connect(og); og.connect(this.master);
+      o.start(t); o.stop(t + 0.2);
+    }
+
+    /* Supply crate cracking open: two wood snaps over a low thunk */
+    crateBreak() {
+      if (!this.ok) return;
+      const ctx = this.ctx, t = ctx.currentTime;
+      [[1500, 0], [2500, 0.045]].forEach(([f, dtOff]) => {
+        const src = this._burst(0.12);
+        const bp = ctx.createBiquadFilter();
+        bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = 1.6;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, t);   // hold silent until this snap's turn
+        g.gain.setValueAtTime(0.28, t + dtOff);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dtOff + 0.06);
+        src.connect(bp); bp.connect(g); g.connect(this.master);
+      });
+      const o = ctx.createOscillator();
+      o.frequency.setValueAtTime(120, t);
+      o.frequency.exponentialRampToValueAtTime(66, t + 0.12);
+      const og = ctx.createGain();
+      og.gain.setValueAtTime(0.4, t);
+      og.gain.exponentialRampToValueAtTime(0.0001, t + 0.14);
+      o.connect(og); og.connect(this.master);
+      o.start(t); o.stop(t + 0.16);
+    }
+
+    /* Ammo pickup: two bright ascending blips */
+    pickup() {
+      if (!this.ok) return;
+      const ctx = this.ctx, t = ctx.currentTime;
+      [[1046.5, 0], [1568, 0.09]].forEach(([f, dtOff]) => {
+        const o = ctx.createOscillator();
+        o.type = 'triangle';
+        o.frequency.value = f;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, t + dtOff);
+        g.gain.exponentialRampToValueAtTime(0.14, t + dtOff + 0.015);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dtOff + 0.14);
+        o.connect(g); g.connect(this.master);
+        o.start(t + dtOff); o.stop(t + dtOff + 0.16);
+      });
+    }
+
+    /* Shield arming: rising shimmer sweep */
+    shieldGain() {
+      if (!this.ok) return;
+      const ctx = this.ctx, t = ctx.currentTime;
+      const o = ctx.createOscillator();
+      o.type = 'triangle';
+      o.frequency.setValueAtTime(440, t);
+      o.frequency.exponentialRampToValueAtTime(990, t + 0.3);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.16, t + 0.05);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+      o.connect(g); g.connect(this.master);
+      o.start(t); o.stop(t + 0.5);
+      const spark = this._burst(0.2);
+      const hp = ctx.createBiquadFilter();
+      hp.type = 'highpass'; hp.frequency.value = 6000;
+      const sg = ctx.createGain();
+      sg.gain.setValueAtTime(0.06, t);
+      sg.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
+      spark.connect(hp); hp.connect(sg); sg.connect(this.master);
+    }
+
+    /* The shield eating a crash: deep gong + glass shimmer */
+    shieldSave() {
+      if (!this.ok) return;
+      const ctx = this.ctx, t = ctx.currentTime;
+      const o = ctx.createOscillator();
+      o.frequency.setValueAtTime(200, t);
+      o.frequency.exponentialRampToValueAtTime(62, t + 0.55);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.8, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
+      o.connect(g); g.connect(this.master);
+      o.start(t); o.stop(t + 0.65);
+      const shimmer = this._burst(0.4);
+      const hp = ctx.createBiquadFilter();
+      hp.type = 'highpass'; hp.frequency.value = 2400;
+      const sg = ctx.createGain();
+      sg.gain.setValueAtTime(0.22, t);
+      sg.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+      shimmer.connect(hp); hp.connect(sg); sg.connect(this.master);
+    }
+
+    /* Tyre chirp — the short bark of rubber when a drift first breaks loose */
+    tyreChirp() {
+      if (!this.ok) return;
+      const ctx = this.ctx, t = ctx.currentTime;
+      const src = this._burst(0.09);
+      const bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass'; bp.Q.value = 3.4;
+      bp.frequency.setValueAtTime(760, t);
+      bp.frequency.exponentialRampToValueAtTime(1500, t + 0.08);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.24, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+      src.connect(bp); bp.connect(g); g.connect(this.master);
+    }
+
     uiBlip() {
       if (!this.ok) return;
       const t = this.ctx.currentTime;
@@ -1171,6 +2128,9 @@ button {
       this.engGain.gain.setTargetAtTime(0, t + 0.1, 0.5);
       this.windGain.gain.setTargetAtTime(0, t, 0.2);
       this.feverGain.gain.setTargetAtTime(0, t, 0.1);
+      this.screechGain.gain.setTargetAtTime(0, t, 0.05);
+      this.boostGain.gain.setTargetAtTime(0, t, 0.05);
+      this.musicSet('off');
       this.master.gain.setValueAtTime(this.master.gain.value, t);
       this.master.gain.linearRampToValueAtTime(0.25, t + 0.4);
       this.master.gain.linearRampToValueAtTime(1, t + 2.4);
@@ -1307,6 +2267,34 @@ button {
     W.paintMoon = paintMoon;
     W.bandMat = bandMat;
 
+    /* ---------- starfield: two clouds twinkling out of phase ----------
+       Screen-space point sizes (no attenuation) so they stay pin-sharp;
+       fog:false keeps them burning through the horizon haze. */
+    function starCloud(n, size, opacity) {
+      const pos = new Float32Array(n * 3);
+      for (let i = 0; i < n; i++) {
+        pos[i * 3]     = (Math.random() - 0.5) * 1000;
+        pos[i * 3 + 1] = 34 + Math.random() * 130;
+        pos[i * 3 + 2] = -344 - Math.random() * 8;
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      const mat = new THREE.PointsMaterial({
+        color: THEME.paper, size, sizeAttenuation: false,
+        transparent: true, opacity, fog: false, depthWrite: false,
+      });
+      const pts = new THREE.Points(geo, mat);
+      pts.renderOrder = -1;
+      scene.add(pts);
+      return mat;
+    }
+    const starMatA = starCloud(150, 2, 0.5);
+    const starMatB = starCloud(110, 3, 0.36);
+    W.twinkle = function (t) {
+      starMatA.opacity = 0.42 + Math.sin(t * 1.3) * 0.13;
+      starMatB.opacity = 0.30 + Math.sin(t * 1.7 + 2.1) * 0.11;
+    };
+
     /* ---------- road ---------- */
     const asphaltTex = canvasTexture(makeCanvas(256, 256, (ctx, w, h) => {
       ctx.fillStyle = css(THEME.ink);
@@ -1338,39 +2326,38 @@ button {
     const nRows = 62;
     const dashes = new THREE.InstancedMesh(dashGeo, paintPaper, nRows * 3);
     const dummy = new THREE.Object3D();
+    const dashData = [];
     let di = 0;
     for (let r = 0; r < nRows; r++) {
       for (const x of [-4.5, 0, 4.5]) {
         dummy.position.set(x, 0.02, 30 - r * DASH_CYCLE);
         dummy.updateMatrix();
         dashes.setMatrixAt(di++, dummy.matrix);
+        dashData.push({ x, z: 30 - r * DASH_CYCLE });
       }
     }
     const dashGroup = new THREE.Group();
     dashGroup.add(dashes);
     scene.add(dashGroup);
     let dashOff = 0;
+    let dashesBent = false;
 
-    // solid edge lines + median line
-    function longLine(x, w, mat) {
-      const m = new THREE.Mesh(new THREE.PlaneGeometry(w, 540), mat);
-      m.rotation.x = -Math.PI / 2;
-      m.position.set(x, 0.018, -220);
-      scene.add(m);
-      return m;
-    }
-    longLine(9.1, 0.34, paintPaper);
-    longLine(-9.1, 0.34, paintPaper);
-    longLine(-9.85, 0.3, paintYellow);
-    longLine(-12.4, 0.3, paintYellow);   // oncoming side edge
+    /* ---------- road curvature ----------
+       Gameplay lives in straight space; the WORLD bends. One curvature
+       value k warps every object's render x by k*z^2 ahead of the car. */
+    W.curveK = 0;
+    const bendX = (z) => (z < 0 ? W.curveK * z * z : 0);
+    const bendYaw = (z) => (z < 0 ? Math.atan(2 * W.curveK * z) : 0);
+    W.bendX = bendX;
 
     /* ---------- conveyors (recycled prop trains) ---------- */
     const conveyors = [];
-    function conveyor(count, spacing, build, onRecycle) {
+    function conveyor(count, spacing, build, onRecycle, longSeg) {
       const items = [];
       for (let i = 0; i < count; i++) {
         const o = build(i);
         o.position.z = KILL_Z - 6 - i * spacing;
+        o.userData.baseX = o.position.x;
         scene.add(o);
         items.push(o);
       }
@@ -1384,12 +2371,29 @@ button {
               o.position.z -= span;
               if (onRecycle) onRecycle(o);
             }
+            o.position.x = o.userData.baseX + bendX(o.position.z);
+            if (longSeg) o.rotation.y = bendYaw(o.position.z);
           }
         },
       };
       conveyors.push(c);
       return c;
     }
+
+    // solid edge lines + median line — segmented so they bend through curves
+    function segLine(x, w, mat) {
+      const geo = new THREE.PlaneGeometry(w, 61);
+      geo.rotateX(-Math.PI / 2);
+      conveyor(10, 60, () => {
+        const m = new THREE.Mesh(geo, mat);
+        m.position.set(x, 0.018, 0);
+        return m;
+      }, null, true);
+    }
+    segLine(9.1, 0.34, paintPaper);
+    segLine(-9.1, 0.34, paintPaper);
+    segLine(-9.85, 0.3, paintYellow);
+    segLine(-12.4, 0.3, paintYellow);   // oncoming side edge
 
     /* sound barriers, both sides */
     const barrierTex = canvasTexture(makeCanvas(64, 8, (ctx, w, h) => {
@@ -1407,7 +2411,7 @@ button {
         const m = new THREE.Mesh(barrierGeo, barrierMat);
         m.position.set(side, 1.6, 0);
         return m;
-      });
+      }, null, true);
     }
     // low guardrail lip at the right road edge
     const railMat = new THREE.MeshLambertMaterial({ color: 0x3a3f45 });
@@ -1416,7 +2420,7 @@ button {
       const m = new THREE.Mesh(railGeo, railMat);
       m.position.set(9.9, 0.25, 0);
       return m;
-    });
+    }, null, true);
     // low jersey median — oncoming headlights stay visible over it
     const medianMat = new THREE.MeshLambertMaterial({ color: 0x53565c });
     const medianGeo = new THREE.BoxGeometry(0.55, 1.0, 60.5);
@@ -1424,7 +2428,7 @@ button {
       const m = new THREE.Mesh(medianGeo, medianMat);
       m.position.set(-11.2, 0.5, 0);
       return m;
-    });
+    }, null, true);
 
     /* streetlights with light pools (the fake-glow budget) */
     const poleMat = new THREE.MeshLambertMaterial({ color: 0x23272c });
@@ -1498,6 +2502,27 @@ button {
         return m;
       });
     }
+
+    /* distant city lights beyond the oncoming lanes — scattered warm/cool
+       windows that the fog swallows into the horizon. Pure night dressing. */
+    const cityTex = canvasTexture(makeCanvas(512, 96, (ctx, w, h) => {
+      for (let i = 0; i < 300; i++) {
+        ctx.fillStyle = Math.random() < 0.72
+          ? 'rgba(255,225,170,' + (0.35 + Math.random() * 0.5).toFixed(2) + ')'
+          : 'rgba(150,200,255,' + (0.3 + Math.random() * 0.4).toFixed(2) + ')';
+        const bx = Math.random() * w, by = Math.random() * (h - 8);
+        ctx.fillRect(bx, by, 2, 2 + Math.random() * 3);
+      }
+    }), 1);
+    const cityGeo = new THREE.PlaneGeometry(60, 9);
+    cityGeo.rotateY(Math.PI / 2);   // pre-rotated: the conveyor's bendYaw owns rotation.y
+    conveyor(8, 60, () => {
+      const m = new THREE.Mesh(cityGeo, new THREE.MeshBasicMaterial({
+        map: cityTex, transparent: true, depthWrite: false, opacity: 0.85,
+      }));
+      m.position.set(-33.5, 4.5, 0);
+      return m;
+    }, null, true);
 
     /* curve chevron boards, right roadside rhythm */
     const chevTex = canvasTexture(makeCanvas(128, 96, (ctx, w, h) => {
@@ -1694,6 +2719,7 @@ button {
        exactly how road-marking painters distort letters. */
     W.stampRoad = function (text, x, z, opts = {}) {
       const m = decalPool[decalCursor];
+      m.userData.baseX = x;
       decalCursor = (decalCursor + 1) % DECAL_COUNT;
       const ctx = m.userData.canvas.getContext('2d');
       ctx.clearRect(0, 0, 512, 160);
@@ -1745,6 +2771,35 @@ button {
       ctx.fillRect(0, 0, 64, 64);
     }), 1);
     const headGlowTex = glowTex;
+
+    // wet-asphalt light streaks: a vertical fade the road "reflects" under
+    // every light source. Bright end (gradient stop 0 = canvas top = local +Y
+    // = world −Z after the flat rotation) sits against the car.
+    function streakTex(rgb) {
+      return canvasTexture(makeCanvas(32, 128, (ctx, w, h) => {
+        const g = ctx.createLinearGradient(0, 0, 0, h);
+        g.addColorStop(0, 'rgba(' + rgb + ',0.5)');
+        g.addColorStop(1, 'rgba(' + rgb + ',0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, w, h);
+      }), 1);
+    }
+    const tailStreakTex = streakTex('232,56,13');
+    const headStreakTex = streakTex('255,232,184');
+    function addStreak(g, tex, width, len, y, z, opacity) {
+      const m = new THREE.Mesh(
+        new THREE.PlaneGeometry(width, len),
+        new THREE.MeshBasicMaterial({
+          map: tex, transparent: true, blending: THREE.AdditiveBlending,
+          depthWrite: false, opacity,
+        })
+      );
+      m.rotation.x = -Math.PI / 2;
+      m.position.set(0, y, z);
+      m.renderOrder = 3;
+      g.add(m);
+      return m;
+    }
 
     function addWheels(g, w, l, y) {
       const xs = w / 2 - 0.08, zs = l / 2 - 0.75;
@@ -1818,6 +2873,8 @@ button {
       }
       const rearY = type.key === 'truck' ? 1.0 : type.key === 'bus' ? 1.0 : 0.72;
       const tail = tailBar(g, type.w * 0.86, rearY, type.l / 2 - 0.02);
+      // taillights bleed onto the wet asphalt behind the car
+      addStreak(g, tailStreakTex, type.w * 0.62, 6.5, 0.032, type.l / 2 + 3.2, 0.45);
       return { group: g, tail, halfW: type.w / 2, halfL: type.l / 2, type };
     }
 
@@ -1932,6 +2989,162 @@ button {
     }
     W.buildPlayer = buildPlayer;
 
+    /* ---------- stunt ramps: caution-striped launch wedges ---------- */
+    const rampStripeTex = canvasTexture(makeCanvas(128, 64, (ctx, w, h) => {
+      ctx.fillStyle = css(THEME.yellow);
+      ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = css(THEME.ink);
+      for (let x = -h; x < w + h; x += 32) {
+        ctx.beginPath();
+        ctx.moveTo(x, h); ctx.lineTo(x + 16, h); ctx.lineTo(x + 16 + h, 0); ctx.lineTo(x + h, 0);
+        ctx.closePath(); ctx.fill();
+      }
+    }), maxAniso);
+    rampStripeTex.wrapS = THREE.RepeatWrapping;
+
+    W.buildRamp = function () {
+      const g = new THREE.Group();
+      const L = 7, H = 1.15, HW = 1.6;
+      // wedge: low lip toward the player (+z), full height at the far (-z) end
+      const s = new THREE.Shape();
+      s.moveTo(-L / 2, 0);
+      s.lineTo(L / 2, 0);
+      s.lineTo(L / 2, H);
+      s.closePath();
+      const geo = new THREE.ExtrudeGeometry(s, { depth: HW * 2, bevelEnabled: false });
+      geo.translate(0, 0, -HW);
+      geo.rotateY(Math.PI / 2);   // profile length onto Z, low edge at +z
+      const body = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: 0x2a2e33 }));
+      g.add(body);
+      // caution-striped plate laid on the slope
+      const slopeLen = Math.sqrt(L * L + H * H);
+      const plate = new THREE.Mesh(
+        new THREE.PlaneGeometry(HW * 2 - 0.1, slopeLen - 0.2),
+        new THREE.MeshBasicMaterial({ map: rampStripeTex })
+      );
+      plate.rotation.x = -Math.PI / 2 + Math.atan2(H, L);
+      plate.position.set(0, H / 2 + 0.03, 0);
+      g.add(plate);
+      g.visible = false;
+      scene.add(g);
+      return { group: g, halfW: HW, halfL: L / 2, height: H };
+    };
+
+    /* ---------- supply crates: shoot them or drive through them ---------- */
+    const crateTex = canvasTexture(makeCanvas(128, 128, (ctx, w, h) => {
+      ctx.fillStyle = css(THEME.yellow);
+      ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = css(THEME.ink);
+      ctx.lineWidth = 10;
+      ctx.strokeRect(6, 6, w - 12, h - 12);
+      ctx.fillStyle = css(THEME.ink);
+      ctx.font = "900 62px 'Noto Sans JP'";
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('補給', w / 2, h / 2 + 2);   // "supply"
+    }), maxAniso);
+    W.buildCrate = function () {
+      const g = new THREE.Group();
+      const box = new THREE.Mesh(
+        new THREE.BoxGeometry(1.6, 1.6, 1.6),
+        new THREE.MeshLambertMaterial({ map: crateTex })
+      );
+      box.position.y = 0.8;
+      g.add(box);
+      // warm night-glow so the drop reads from deep in the fog
+      const glow = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: glowTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.55,
+      }));
+      glow.position.y = 1.0;
+      glow.scale.set(4.2, 4.2, 1);
+      g.add(glow);
+      g.visible = false;
+      scene.add(g);
+      return { group: g, box, half: 0.8 };
+    };
+
+    // shattered-crate shards, one shared pool (main drives the physics)
+    const shardMats = [
+      new THREE.MeshBasicMaterial({ color: THEME.yellow }),
+      new THREE.MeshBasicMaterial({ color: THEME.ink }),
+      new THREE.MeshBasicMaterial({ color: THEME.paper }),
+    ];
+    const shardGeoA = new THREE.BoxGeometry(0.42, 0.42, 0.42);
+    const shardGeoB = new THREE.BoxGeometry(0.26, 0.26, 0.26);
+    W.crateShards = [];
+    for (let i = 0; i < 14; i++) {
+      const m = new THREE.Mesh(i % 2 ? shardGeoA : shardGeoB, shardMats[i % 3]);
+      m.visible = false;
+      scene.add(m);
+      W.crateShards.push(m);
+    }
+
+    /* ---------- tracer bolt: the front cannon's round ---------- */
+    W.buildTracer = function () {
+      const g = new THREE.Group();
+      const bolt = new THREE.Mesh(
+        new THREE.BoxGeometry(0.2, 0.2, 3.0),
+        new THREE.MeshBasicMaterial({ color: THEME.yellow })
+      );
+      bolt.position.y = 0.6;
+      g.add(bolt);
+      const glow = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: glowTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.9,
+      }));
+      glow.position.y = 0.6;
+      glow.scale.set(2.4, 2.4, 1);
+      g.add(glow);
+      g.visible = false;
+      scene.add(g);
+      return { group: g };
+    };
+
+    /* ---------- shield aura: the one-time crash barrier ---------- */
+    W.buildShieldAura = function () {
+      // arc < 2π: the gap breaks the ring's symmetry so its spin actually reads
+      const geo = new THREE.TorusGeometry(2.5, 0.08, 8, 48, Math.PI * 1.7);
+      geo.rotateX(Math.PI / 2);   // lie flat — caller spins rotation.y
+      const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+        color: THEME.yellow, transparent: true, opacity: 0.7,
+        blending: THREE.AdditiveBlending, depthWrite: false,
+      }));
+      m.position.y = 0.6;
+      m.visible = false;
+      return m;   // caller parents it to the player group
+    };
+
+    /* ---------- drift skid ink (the road remembers your slides) ---------- */
+    const SKID_COUNT = 34;
+    const skidGeo = new THREE.PlaneGeometry(0.17, 1.5);
+    skidGeo.rotateX(-Math.PI / 2);
+    const skids = [];
+    for (let i = 0; i < SKID_COUNT; i++) {
+      const m = new THREE.Mesh(skidGeo, new THREE.MeshBasicMaterial({
+        color: THEME.shu, transparent: true, opacity: 0, depthWrite: false,
+      }));
+      m.position.y = 0.024 + (i % 8) * 0.0007;
+      m.renderOrder = 3;
+      m.visible = false;
+      m.userData = { live: false, baseX: 0 };
+      scene.add(m);
+      skids.push(m);
+    }
+    let skidCursor = 0;
+    W.dropSkid = function (x, z, yaw) {
+      const m = skids[skidCursor];
+      skidCursor = (skidCursor + 1) % SKID_COUNT;
+      m.userData.live = true;
+      m.userData.baseX = x;
+      m.position.x = x;
+      m.position.z = z;
+      m.rotation.y = yaw;
+      m.material.opacity = 0.34;
+      m.visible = true;
+    };
+    W.clearSkids = function () {
+      for (const m of skids) { m.visible = false; m.userData.live = false; m.material.opacity = 0; }
+    };
+
     /* ---------- oncoming silhouettes (pure speed sensation) ---------- */
     function buildOncoming() {
       const g = new THREE.Group();
@@ -1950,20 +3163,46 @@ button {
         glow.scale.set(2.4, 2.4, 1);
         g.add(glow);
       }
+      // headlights smear down the wet lane ahead of the silhouette
+      addStreak(g, headStreakTex, 1.7, 8, 0.03, 2.3 + 4, 0.38);
       scene.add(g);
       return g;
     }
     W.buildOncoming = buildOncoming;
 
     /* ---------- shared scroll ---------- */
-    W.scroll = function (dz) {
+    W.scroll = function (dz, dt) {
       dashOff += dz;
-      dashGroup.position.z = dashOff % DASH_CYCLE;
+      const groupZ = dashOff % DASH_CYCLE;
+      dashGroup.position.z = groupZ;
+      // bend the lane dashes through curves (matrices only touched when needed)
+      if (W.curveK !== 0 || dashesBent) {
+        for (let i = 0; i < dashData.length; i++) {
+          const d = dashData[i];
+          dummy.position.set(d.x + bendX(d.z + groupZ), 0.02, d.z);
+          dummy.rotation.y = bendYaw(d.z + groupZ);
+          dummy.updateMatrix();
+          dashes.setMatrixAt(i, dummy.matrix);
+        }
+        dashes.instanceMatrix.needsUpdate = true;
+        dashesBent = W.curveK !== 0;
+      }
       for (const c of conveyors) c.scroll(dz);
       for (const m of decalPool) {
         if (!m.userData.live) continue;
         m.position.z += dz;
+        m.position.x = (m.userData.baseX || 0) + bendX(m.position.z);
         if (m.position.z > KILL_Z) {
+          m.visible = false;
+          m.userData.live = false;
+        }
+      }
+      for (const m of skids) {
+        if (!m.userData.live) continue;
+        m.position.z += dz;
+        m.position.x = m.userData.baseX + bendX(m.position.z);
+        m.material.opacity -= (dt || 0.016) * 0.055;
+        if (m.position.z > KILL_Z || m.material.opacity <= 0) {
           m.visible = false;
           m.userData.live = false;
         }
@@ -2010,6 +3249,63 @@ button {
   ];
   const RM = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  /* ---------- v3 tuning: cornering / speed skills / stunts ---------- */
+  // cornering — a bend the car must actively hold; drift is the tool
+  const CORNER_MIN  = 1.2e-4;   // |curveK| above this = a "hard" corner (grip/apex/thinning)
+  // Centrifugal push is intentionally held BELOW plain steering authority
+  // (STEER_VMAX = 16) so ordinary left/right steering can always hold a corner.
+  // Earlier CF_MAX=22 > 16 shoved the car into the outside wall every corner —
+  // that was the "car always goes left, I can't control it" bug. Now a corner
+  // is a lean you steer through; drift (26.4 authority) just makes it effortless
+  // and scores the apex.
+  const CF_K        = RM ? 7 : 9;    // centrifugal coefficient (was 14 / 18)
+  const CF_MAX      = RM ? 9 : 11;   // hard cap, < STEER_VMAX so steering wins (was 16 / 22)
+  const CF_AIR      = 0.30;     // centrifugal scale while airborne (don't shove landings)
+  const GRIP_CANCEL = 0.55;     // fraction of push cancelled when drifting into the apex
+  const CAM_YAW_K   = 820;      // camera turn-in feel-term (was 650 — read the corner harder)
+  const CAM_YAW_MAX = 0.16;     // rad (~9.2°) comfort cap (was 0.11 — a corner should feel like one)
+  const CAM_ROLL_K  = 300;      // camera bank (was 380 — headroom for yaw)
+  const PLYR_YAW_K  = 600;      // player nose points into the corner
+  const APEX_K      = 0.6;      // apex-ink accrual rate
+  const APEX_CLEAR  = 300;      // cornerApex needed for an APEX CLEAR payout
+  const P_HARD      = 0.45;     // chance a corner is "hard"
+
+  // speed skills — draft / slingshot / overdrive
+  const DRAFT_LATERAL = 1.7;    // |c.lx - px| to sit "in the pocket"
+  const DRAFT_ZMIN    = 5;      // forward gap min (units ahead)
+  const DRAFT_ZMAX    = 22;     // forward gap max
+  const DRAFT_FULL    = 1.0;    // seconds to full charge
+  const DRAFT_DECAY   = 1.1;    // seconds to bleed out of the pocket (was 0.5 — gentler drop-off)
+  const SLING_MIN     = 0.6;    // draft charge needed to arm a slingshot
+  const SLING_TIME    = 1.5;    // slingshot decay window, seconds (was 0.9 — melt, don't sag)
+  const SLING_MULT    = 1.18;   // peak slingshot speed mult, decays -> 1.0
+  const OD_ARM        = 1.5;    // sustained boost@high-speed to arm overdrive
+  const OD_ENTER_N    = 0.80;   // speedNorm to arm
+  const OD_EXIT_N     = 0.65;   // speedNorm to drop
+  const OD_SPEED      = 1.06;   // overdrive speed mult (extends the top end)
+  const OD_SCORE      = 1.5;    // overdrive score mult
+  const SCORE_MULT_CAP = 4;     // clamp on fever×boost×overdrive score mult
+
+  // air tricks
+  const ROLL_RATE = 6.0;        // rad/s barrel roll on z (←/→)
+  const FLIP_RATE = 5.0;        // rad/s flip on x (↑)
+  const SPIN_RATE = 5.5;        // rad/s spin on y (drift)
+  const AIR_STEER = 0.40;       // lateral steer scale while airborne (aim the landing)
+  const CLEAN_THRESH = 0.9;     // rad (~52°) residual-to-upright for a CLEAN land
+  const BOTCH_TIME  = 0.7;      // wipeout control-loss window
+  const BOTCH_STEER = 0.35;     // steer authority during wipeout (never zero)
+  const BOTCH_GRACE = 0.9;      // landGrace on a botch — forgiving, never a crash
+
+  // arsenal — front cannon, supply crates, one-time crash shield
+  const AMMO_START = 3;
+  const AMMO_MAX   = 9;
+  const AMMO_PER_CRATE = 3;
+  const TRACER_SPEED = 170;     // units/s, relative to the player
+  const BLAST_PTS  = 150;       // × combo when a shot clears a car
+  const CRATE_PTS  = 250;       // flat ink for cracking a crate open
+  const SHIELD_CHANCE = 0.4;    // crate rolls a shield when you don't have one
+  const SHIELD_GRACE  = 1.4;    // post-save invulnerability window, seconds
+
   const fmt = (n) => Math.floor(n).toLocaleString('en-US');
   const store = {
     get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
@@ -2046,6 +3342,7 @@ button {
   /* ---------- state ---------- */
   let state = 'boot';
   let paused = false;
+  let helpOpen = false;
   const ts = { v: 1 };                    // gameplay time scale (GSAP-tweened)
   let baseSpeed = 0, speed = 0, speedNorm = 0;
   let steerL = false, steerR = false, vx = 0;
@@ -2059,6 +3356,33 @@ button {
   let lastStampMesh = null;
   let camX = 0;
   let clockT = 0;
+
+  /* v2 systems: boost / drift / air / curves */
+  let boostMeter = 0, wantBoost = false, boosting = false, boostFov = 0;
+  let driftHeld = false, drifting = false, wasDrifting = false;
+  let driftPts = 0, driftTotal = 0, driftTime = 0, skidTimer = 0;
+  let airborne = false, vyAir = 0, airTime = 0, airTotal = 0;
+  let landGrace = 0;
+  const curveK = { v: 0 };
+  let curveActive = false, curveTimer = 14;
+  const ramps = [];
+  let rampTimer = 18;
+
+  /* v3 systems: real cornering / speed skills / air tricks */
+  let curveDir = 1, curveHard = false, cornerApex = 0, apexDrift = false;
+  let camYaw = 0;
+  let draftCharge = 0, draftedThisFrame = false, slingTimer = 0;
+  let overdrive = false, overdriveArm = 0, overdriveTime = 0, wasBoosting = false;
+  let rollAngle = 0, flipAngle = 0, spinAngle = 0, lastTrickSpin = 0, wipeoutTimer = 0;
+  let slingshots = 0, apexClears = 0, bestTrick = 10;   // bestTrick = ×mult*10 (10 => ×1.0)
+
+  /* v4 systems: cannon / supply crates / crash shield */
+  let ammo = AMMO_START, shieldOn = false;
+  let cratesBroken = 0, carsBlasted = 0;
+  const shots = [];             // pooled tracer bolts
+  const crates = [];            // pooled supply drops
+  const shards = [];            // crate-shatter debris in flight
+  let crateTimer = 9;
 
   player.group.position.set(LANE_X[2], 0, 0);
 
@@ -2077,6 +3401,18 @@ button {
     rDist: $('#r-dist'), rMiss: $('#r-miss'), rCombo: $('#r-combo'), rSpeed: $('#r-speed'),
     rFever: $('#r-fever'), rScore: $('#r-score'), newRecord: $('#new-record'),
     restartBtn: $('#restart-btn'), pause: $('#pause'), muteBtn: $('#mute-btn'),
+    musicBtn: $('#music-btn'), boostFill: $('#boost-fill'), boostBtn: $('#boost-btn'),
+    driftLive: $('#drift-live'), driftLivePts: $('#drift-live-pts'),
+    rDrift: $('#r-drift'), rAir: $('#r-air'),
+    // v3 HUD
+    speedLines: $('#speed-lines'), draftCharge: $('#draft-charge'),
+    overdriveTag: $('#overdrive-tag'), apexLive: $('#apex-live'), apexLivePts: $('#apex-live-pts'),
+    airTrick: $('#air-trick'),
+    turnSignal: $('#turn-signal'), turnArrow: $('#turn-arrow'), turnText: $('#turn-text'),
+    // v4 HUD
+    ammoPips: $('#ammo-pips'), shieldTag: $('#shield-tag'), vignette: $('#vignette'),
+    rCrate: $('#r-crate'), rBlast: $('#r-blast'),
+    rSling: $('#r-sling'), rApex: $('#r-apex'), rTrick: $('#r-trick'), rOd: $('#r-od'),
   };
 
   /* ---------- score odometer ---------- */
@@ -2115,6 +3451,22 @@ button {
     }
     audio.tick();
   }
+
+  /* ---------- ammo pips ---------- */
+  const ammoPipEls = [];
+  (function buildAmmoPips() {
+    for (let i = 0; i < AMMO_MAX; i++) {
+      const p = document.createElement('span');
+      p.className = 'pip';
+      el.ammoPips.appendChild(p);
+      ammoPipEls.push(p);
+    }
+  })();
+  function syncAmmo() {
+    for (let i = 0; i < AMMO_MAX; i++) ammoPipEls[i].classList.toggle('on', i < ammo);
+    el.shieldTag.style.opacity = shieldOn ? '1' : '0';
+  }
+  syncAmmo();
 
   /* ---------- combo stripes ---------- */
   function syncStripes() {
@@ -2211,6 +3563,7 @@ button {
     world.paintMoon(true);
     player.paintLivery(combo, true);
     audio.feverOn();
+    audio.musicSet('fever');
     gsap.to(el.feverBand, { scaleX: 1, duration: 0.35, ease: 'back.out(2)' });
     inkSlap(0.12);
     audio.thunk(true);
@@ -2222,6 +3575,7 @@ button {
     world.paintMoon(false);
     player.paintLivery(combo, false);
     audio.feverOff();
+    if (state === 'run') audio.musicSet('run');
     gsap.to(el.feverBand, { scaleX: 0, duration: 0.3, ease: 'power2.in' });
   }
 
@@ -2253,9 +3607,14 @@ button {
   }
   function releaseCar(car) {
     car.group.visible = false;
+    gsap.killTweensOf(car);                 // lane-change lx tween
+    // if that kill caught a live lane change, its onComplete never fires —
+    // free the global lock or no car would ever signal again this run
+    if (car.changing) { car.changing = false; laneChangerBusy = false; }
     gsap.killTweensOf(car.group.position);
     gsap.killTweensOf(car.group.rotation);
     car.group.rotation.set(0, 0, 0);
+    car.isDraft = false; car.drafted = false; car.slingDone = false; car.dead = false;
     (pools[car.typeIdx] || (pools[car.typeIdx] = [])).push(car);
   }
 
@@ -2310,13 +3669,15 @@ button {
       car.lane = lane;
       car.z = SP - Math.random() * 24;
       car.speed = carSpeed;
+      car.lx = LANE_X[lane];                // logical x — bend is render-only
       car.passed = false;
       car.swelled = false;
       car.minGap = Infinity;
       car.changing = false;
       car.baseTail = 1.4;
+      car.isDraft = false; car.drafted = false; car.slingDone = false; car.dead = false;
       car.group.rotation.set(0, 0, 0);
-      car.group.position.set(LANE_X[lane], 0, car.z);
+      car.group.position.set(car.lx, 0, car.z);
       active.push(car);
       return;
     }
@@ -2345,28 +3706,28 @@ button {
 
     laneChangerBusy = true;
     car.changing = true;
-    const oldLane = car.lane;
     car.lane = target;
-    // blinker, then the eased drift
+    // blinker, then the eased drift (logical x — the bend rides on top)
     const blink = gsap.to(car.tail.glow.material, { opacity: 0.15, duration: 0.12, repeat: 5, yoyo: true });
-    gsap.to(car.group.position, {
-      x: LANE_X[target], duration: 1.15, delay: 0.7, ease: 'power1.inOut',
+    gsap.to(car, {
+      lx: LANE_X[target], duration: 1.15, delay: 0.7, ease: 'power1.inOut',
       onComplete: () => { car.changing = false; laneChangerBusy = false; blink.kill(); car.tail.glow.material.opacity = 0.55; },
     });
-    void oldLane;
   }
 
   /* ---------- oncoming silhouettes ---------- */
   const oncoming = [];
   for (let i = 0; i < 5; i++) {
     const g = world.buildOncoming();
-    oncoming.push({ g, speed: 30 + Math.random() * 26, played: false });
-    g.position.set(world.ONCOMING_X[i % 2], 0, -80 - i * 110 - Math.random() * 40);
+    const o = { g, lx: world.ONCOMING_X[i % 2], speed: 30 + Math.random() * 26, played: false };
+    oncoming.push(o);
+    g.position.set(o.lx, 0, -80 - i * 110 - Math.random() * 40);
     g.visible = true;
   }
   function resetOncoming(o) {
     o.g.position.z = -480 - Math.random() * 140;
-    o.g.position.x = world.ONCOMING_X[Math.random() < 0.5 ? 0 : 1];
+    o.lx = world.ONCOMING_X[Math.random() < 0.5 ? 0 : 1];
+    o.g.position.x = o.lx;
     o.speed = 30 + Math.random() * 26;
     o.played = false;
   }
@@ -2382,23 +3743,42 @@ button {
     comboTimer = DECAY;
     nearMisses++;
     bestCombo = Math.max(bestCombo, combo);
-    const pts = 100 * tierDef.mult * combo * (fever ? 2 : 1);
+    // shaving a car mid-slide is the crown move: double ink — triple through an apex
+    const driftMult = drifting ? (apexDrift ? 3 : 2) : 1;
+    const pts = 100 * tierDef.mult * combo * (fever ? 2 : 1) * driftMult;
     score += pts;
+    boostMeter = Math.min(100, boostMeter + 8 + tierDef.mult * 5);
 
-    const side = Math.sign(car.group.position.x - player.group.position.x) || 1;
-    showStamp(side, tierDef, pts);
+    const side = Math.sign(car.lx - player.group.position.x) || 1;
+    const def = drifting
+      ? { jp: tierDef.jp, word: 'DRIFT ' + tierDef.word, cls: tierDef.cls }
+      : tierDef;
+    showStamp(side, def, pts);
+
+    // slingshot: pulling out of a fully-charged draft to shave the car you tucked behind
+    if (car.drafted && !car.slingDone) {
+      car.slingDone = true;
+      slingTimer = SLING_TIME;
+      slingshots++;
+      boostMeter = Math.min(100, boostMeter + 25);
+      const slPts = 500 * combo;
+      score += slPts;
+      showStamp(side, { jp: 'スリングショット', word: 'SLINGSHOT', cls: 't3' }, slPts);
+      inkSlap(0.14);
+      if (!RM) fovKick = Math.min(8, fovKick + 4);
+    }
     audio.whoosh(side * 0.8, combo);
     audio.thunk(tierDef.mult === 3);
     inkSlap(tierDef.mult === 3 ? 0.14 : 0.08);
 
     if (!RM) {
-      const dip = tierDef.mult === 3 ? 0.85 : 0.92;
-      gsap.timeline().to(ts, { v: dip, duration: 0.05 }).to(ts, { v: 1, duration: 0.14 });
+      // no time-dip here anymore — the old hitstop read as the game "suddenly
+      // slowing down" on every pass. The FOV kick alone sells the rush forward.
       fovKick = Math.min(6, fovKick + (tierDef.mult === 3 ? 3.5 : 2));
     }
 
     // print the near-miss onto the asphalt — the wake of close calls
-    const midX = (car.group.position.x + player.group.position.x) / 2;
+    const midX = (car.lx + player.group.position.x) / 2;
     lastStampMesh = world.stampRoad(tierDef.jp, midX, 2.5, {
       jp: true,
       width: 3.2 + tierDef.mult * 1.6,
@@ -2413,9 +3793,10 @@ button {
     else player.paintLivery(combo, fever);
     syncStripes();
 
-    // flash the passed car's shell white for two frames
+    // flash the passed car's shell white for two frames (skip transparent
+    // ground-effect planes — flashing the tail streak paints the road white)
     car.group.traverse((o) => {
-      if (o.isMesh && o.material && o.material.color && !o.userData.flashing) {
+      if (o.isMesh && o.material && o.material.color && !o.material.transparent && !o.userData.flashing) {
         o.userData.flashing = true;
         const old = o.material;
         o.material = new THREE.MeshBasicMaterial({ color: 0xF2EFE5 });
@@ -2434,11 +3815,25 @@ button {
     audio.crash();
     inkSlap(0.2);
     exitFever();
+    drifting = false;
+    apexDrift = false;
+    overdrive = false;
+    el.driftLive.style.opacity = 0;
+    el.apexLive.style.opacity = 0;
+    el.airTrick.style.opacity = 0;
+    el.overdriveTag.style.opacity = 0;
+    if (!RM) el.speedLines.style.opacity = 0;
     // the run's ink dries: combo stack fades out under the crash
     gsap.to([el.comboStack, el.feverBand, el.hint], { opacity: 0, duration: 0.5 });
     gsap.killTweensOf(ts);
     ts.v = 0;                                   // impact freeze
     gsap.to(ts, { v: 0.14, duration: 0.35, delay: 0.12, ease: 'power2.out' });
+    // kill the pending corner ramp-out tween so its onComplete can't pay out an apex after the crash
+    gsap.killTweensOf(curveK);
+    curveActive = false;
+    cornerApex = 0;
+    if (el.turnSignal) { gsap.killTweensOf(el.turnSignal); gsap.set(el.turnSignal, { opacity: 0 }); }
+    aura.visible = false;   // a crash means the shield wasn't armed — keep the wreck clean
 
     crashPos.copy(player.group.position);
     topSpeed = Math.max(topSpeed, speed * KMH);
@@ -2495,8 +3890,17 @@ button {
     el.rMiss.textContent = '0';
     el.rCombo.textContent = '×1';
     el.rSpeed.textContent = '0 km/h';
+    el.rDrift.textContent = '0';
+    el.rAir.textContent = '0.0 s';
+    el.rSling.textContent = '0';
+    el.rApex.textContent = '0';
+    el.rCrate.textContent = '0';
+    el.rBlast.textContent = '0';
+    el.rTrick.textContent = '×1.0';
+    el.rOd.textContent = '0.0 s';
     el.rFever.textContent = '0.0 s';
     el.rScore.textContent = '0';
+    audio.musicSet('results');
 
     newBest = score > best;
     if (newBest) {
@@ -2523,6 +3927,14 @@ button {
       [el.rMiss, { v: 0 }, nearMisses, (o) => String(Math.round(o.v))],
       [el.rCombo, { v: 0 }, bestCombo, (o) => '×' + Math.round(o.v)],
       [el.rSpeed, { v: 0 }, Math.round(topSpeed), (o) => Math.round(o.v) + ' km/h'],
+      [el.rDrift, { v: 0 }, driftTotal, (o) => fmt(o.v)],
+      [el.rAir, { v: 0 }, airTotal, (o) => o.v.toFixed(1) + ' s'],
+      [el.rSling, { v: 0 }, slingshots, (o) => String(Math.round(o.v))],
+      [el.rApex, { v: 0 }, apexClears, (o) => String(Math.round(o.v))],
+      [el.rCrate, { v: 0 }, cratesBroken, (o) => String(Math.round(o.v))],
+      [el.rBlast, { v: 0 }, carsBlasted, (o) => String(Math.round(o.v))],
+      [el.rTrick, { v: 0 }, bestTrick / 10, (o) => '×' + o.v.toFixed(1)],
+      [el.rOd, { v: 0 }, overdriveTime, (o) => o.v.toFixed(1) + ' s'],
       [el.rFever, { v: 0 }, feverTime, (o) => o.v.toFixed(1) + ' s'],
     ];
     vals.forEach(([node, o, target, fmtFn], i) => {
@@ -2541,7 +3953,7 @@ button {
       tl.fromTo(el.newRecord, { scale: 0, rotation: -20 },
         { scale: 1, rotation: -8, duration: 0.4, ease: 'back.out(5)', onStart: () => { audio.thunk(true); inkSlap(0.1); } }, 2.4);
     }
-    tl.call(() => el.restartBtn.focus(), null, 1.6);
+    tl.call(() => el.restartBtn.focus({ preventScroll: true }), null, 1.6);
   }
 
   /* ---------- restart: squeegee wipe, rolling in under a second ---------- */
@@ -2590,6 +4002,47 @@ button {
     score = 0; dist = 0; combo = 1; comboTimer = 0;
     fever = false; feverTime = 0; nearMisses = 0; bestCombo = 1; topSpeed = 0;
     nextMilestone = 10000; bestPassedShown = false;
+
+    // v2 state
+    boostMeter = 0; boosting = false; boostFov = 0;
+    drifting = false; wasDrifting = false; driftPts = 0; driftTotal = 0; driftTime = 0;
+    airborne = false; vyAir = 0; airTime = 0; airTotal = 0;
+    landGrace = 0;
+    gsap.killTweensOf(curveK);
+    curveK.v = 0; world.curveK = 0; curveActive = false; curveTimer = 14;
+    rampTimer = 18;
+    for (const r of ramps) { r.live = false; r.group.visible = false; }
+    world.clearSkids();
+    el.boostFill.style.transform = 'scaleX(0)';
+    el.driftLive.style.opacity = 0;
+
+    // v3 state: cornering / speed skills / air tricks
+    curveDir = 1; curveHard = false; cornerApex = 0; apexDrift = false; camYaw = 0;
+    if (el.turnSignal) { gsap.killTweensOf(el.turnSignal); gsap.set(el.turnSignal, { opacity: 0 }); }
+    draftCharge = 0; draftedThisFrame = false; slingTimer = 0;
+    overdrive = false; overdriveArm = 0; overdriveTime = 0; wasBoosting = false;
+    rollAngle = 0; flipAngle = 0; spinAngle = 0; lastTrickSpin = 0; wipeoutTimer = 0;
+    slingshots = 0; apexClears = 0; bestTrick = 10;
+
+    // v4 state: cannon / crates / shield
+    ammo = AMMO_START; shieldOn = false; aura.visible = false;
+    aura.scale.set(1, 1, 1);
+    cratesBroken = 0; carsBlasted = 0; crateTimer = 9;
+    for (const s of shots) killShot(s);
+    for (const cr of crates) { cr.live = false; cr.group.visible = false; }
+    for (const sh of shards) sh.m.visible = false;
+    shards.length = 0;
+    syncAmmo();
+    el.vignette.style.opacity = 0;
+    gsap.killTweensOf(player.group.rotation);
+    el.speedLines.style.opacity = RM ? '0.10' : '0';
+    el.speedLines.style.transform = 'none';
+    el.airTrick.style.opacity = 0;
+    el.overdriveTag.style.opacity = 0;
+    el.apexLive.style.opacity = 0;
+    el.draftCharge.style.transform = 'scaleX(0)';
+    audio.setDrift(0);
+    audio.musicSet('run');
     scoreShown = -1; syncScore();
     el.comboStack.innerHTML = '';
     gsap.set([el.comboStack, el.feverBand], { opacity: 1 });
@@ -2605,6 +4058,7 @@ button {
 
     baseSpeed = V0;
     speed = V0;
+    speedNorm = 0;
     spawnTimer = 1.4;
     seedTraffic();
     state = 'run';
@@ -2656,6 +4110,7 @@ button {
     audio.init();
     audio.resume();
     audio.idle();
+    audio.musicSet('intro');
     hold.active = true;
     if (holdTween) holdTween.kill();
     holdTween = gsap.to(hold, {
@@ -2684,8 +4139,9 @@ button {
 
   function chasePose(outPos, outLook) {
     const px = player.group.position.x;
-    outPos.set(camX, 5.3 - speedNorm * 0.7, 10.6 - speedNorm * 1.1);
-    outLook.set(px * 0.82, 1.35, -24);
+    const py = player.group.position.y;
+    outPos.set(camX, 5.3 - speedNorm * 0.7 + py * 0.55, 10.6 - speedNorm * 1.1);
+    outLook.set(px * 0.82, 1.35 + py * 0.4, -24);
   }
 
   function commitStart() {
@@ -2693,6 +4149,7 @@ button {
     hold.active = false;
     state = 'starting';
     audio.thunk(true);
+    audio.musicSet('run');
     inkSlap(0.1);
 
     // the title is already painted on the asphalt — drive over it
@@ -2730,6 +4187,368 @@ button {
     gsap.set(el.feverBand, { scaleX: 0 });
   }
 
+  /* ---------- curves: real corners you must hold — drift is the tool ---------- */
+  function startCurve() {
+    curveActive = true;
+    const dir = Math.random() < 0.5 ? -1 : 1;
+    const hard = Math.random() < P_HARD;
+    // hard corners bend nearly 2× harder and demand a committed drift to hold the line
+    const mag = dir * (hard ? 1.6e-4 + Math.random() * 0.4e-4 : 0.7e-4 + Math.random() * 0.4e-4);
+    curveDir = dir;
+    curveHard = hard;
+    cornerApex = 0;                       // per-corner apex ledger starts fresh
+    const tIn = hard ? 2 : 3;
+    const tHold = hard ? 5 + Math.random() * 4 : 7 + Math.random() * 5;
+    const tOut = hard ? 2.5 : 3;
+    gsap.to(curveK, { v: mag, duration: tIn, ease: 'power1.inOut' });
+    gsap.to(curveK, {
+      v: 0, duration: tOut, ease: 'power1.inOut', delay: tIn + tHold,
+      onComplete: () => { curveActive = false; curveTimer = 9 + Math.random() * 10; evalApexClear(); hideTurnSignal(); },
+    });
+    // telegraph at the fog edge — hard corners burn in vermilion, gentle in paper
+    world.stampRoad(dir > 0 ? 'ドリフト →' : '← ドリフト', 0, -330, {
+      jp: true, width: 11, noGhost: true, opacity: 0.6, color: hard ? THEME.shu : THEME.paper,
+    });
+    // HUD turn-call + a panned rally note so the corner is unmissable
+    showTurnSignal(dir, hard);
+    audio.cornerAlert(dir, hard);
+  }
+
+  /* ---------- turn-call banner (makes a corner read as LEFT / RIGHT) ---------- */
+  function showTurnSignal(dir, hard) {
+    if (!el.turnSignal) return;
+    const right = dir > 0;
+    el.turnArrow.textContent = right ? '▶' : '◀';
+    el.turnText.textContent = (right ? 'TURN RIGHT' : 'TURN LEFT') + (hard ? ' !!' : '');
+    el.turnSignal.classList.toggle('right', right);
+    el.turnSignal.classList.toggle('left', !right);
+    el.turnSignal.classList.toggle('hard', hard);
+    gsap.killTweensOf(el.turnSignal);
+    // xPercent:-50 keeps GSAP's inline transform centred — animating bare `x`
+    // would overwrite the CSS translateX(-50%) and shove the banner off-centre
+    gsap.fromTo(el.turnSignal,
+      { opacity: 0, xPercent: -50, x: right ? 40 : -40 },
+      { opacity: 1, xPercent: -50, x: 0, duration: 0.4, ease: 'back.out(2)' });
+  }
+  function hideTurnSignal() {
+    if (!el.turnSignal) return;
+    gsap.killTweensOf(el.turnSignal);
+    gsap.to(el.turnSignal, { opacity: 0, duration: 0.35, ease: 'power2.in' });
+  }
+
+  /* the payout for holding a drift line all the way through a corner */
+  function evalApexClear() {
+    if (state !== 'run') { cornerApex = 0; return; }   // a stray onComplete after a crash pays nothing
+    if (cornerApex >= APEX_CLEAR) {
+      const pts = Math.floor(cornerApex) * combo;
+      score += pts;
+      apexClears++;
+      boostMeter = Math.min(100, boostMeter + 20);
+      showStamp(curveDir, { jp: 'アペックス', word: 'APEX CLEAR', cls: 't3' }, pts);
+      world.stampRoad('アペックス', player.group.position.x, 2.5, { jp: true, width: 5 });
+      inkSlap(0.12);
+      audio.thunk(true);
+      if (!RM) fovKick = Math.min(8, fovKick + 3);
+    }
+    cornerApex = 0;
+  }
+
+  /* ---------- stunt ramps ---------- */
+  for (let i = 0; i < 2; i++) {
+    const r = world.buildRamp();
+    r.live = false;
+    r.lane = 0;
+    r.z = 0;
+    ramps.push(r);
+  }
+
+  function spawnRamp() {
+    const r = ramps.find((x) => !x.live);
+    if (!r) return;
+    const lanes = [0, 1, 2, 3].sort(() => Math.random() - 0.5);
+    for (const lane of lanes) {
+      if (active.some((c) => c.lane === lane && Math.abs(c.z - world.SPAWN_Z) < 90)) continue;
+      r.live = true;
+      r.lane = lane;
+      r.z = world.SPAWN_Z - 10;
+      r.group.visible = true;
+      return;
+    }
+  }
+
+  function updateRamps(dt) {
+    for (const r of ramps) {
+      if (!r.live) continue;
+      r.z += speed * dt;
+      r.group.position.set(LANE_X[r.lane] + world.bendX(r.z), 0, r.z);
+      if (r.z > world.KILL_Z) { r.live = false; r.group.visible = false; continue; }
+      if (state === 'run' && !airborne &&
+          Math.abs(player.group.position.x - LANE_X[r.lane]) < r.halfW + 0.5 &&
+          Math.abs(r.z) < r.halfL) {
+        launch();
+      }
+    }
+  }
+
+  function launch() {
+    airborne = true;
+    vyAir = 6.8 + speed * 0.075;          // more hang time to actually fly a trick
+    airTime = 0;
+    rollAngle = 0; flipAngle = 0; spinAngle = 0; lastTrickSpin = 0;
+    audio.swell();
+    if (!RM) fovKick = Math.min(8, fovKick + 3);
+  }
+
+  /* ---------- arsenal: front cannon, supply crates, crash shield ---------- */
+  const aura = world.buildShieldAura();
+  player.group.add(aura);
+
+  for (let i = 0; i < 4; i++) shots.push({ ...world.buildTracer(), live: false, x: 0, z: 0 });
+  for (let i = 0; i < 3; i++) crates.push({ ...world.buildCrate(), live: false, lane: 0, z: 0 });
+
+  function fire() {
+    if (state !== 'run' || paused || helpOpen || airborne || ammo <= 0) return;
+    const s = shots.find((x) => !x.live);
+    if (!s) return;
+    ammo--;
+    syncAmmo();
+    s.live = true;
+    s.x = player.group.position.x;
+    s.z = -3;
+    s.group.visible = true;
+    audio.shoot();
+    if (!RM) fovKick = Math.min(6, fovKick + 0.8);   // recoil breath, not a jolt
+  }
+  function killShot(s) { s.live = false; s.group.visible = false; }
+
+  function spawnCrate() {
+    const cr = crates.find((x) => !x.live);
+    if (!cr) return;
+    const lanes = [0, 1, 2, 3].sort(() => Math.random() - 0.5);
+    for (const lane of lanes) {
+      if (active.some((c) => c.lane === lane && Math.abs(c.z - world.SPAWN_Z) < 90)) continue;
+      if (ramps.some((r) => r.live && r.lane === lane && Math.abs(r.z - world.SPAWN_Z) < 90)) continue;
+      cr.live = true;
+      cr.lane = lane;
+      cr.z = world.SPAWN_Z - 5;
+      cr.group.visible = true;
+      return;
+    }
+  }
+
+  function shatterCrate(x, z) {
+    for (const m of world.crateShards) {
+      if (m.visible) continue;   // let overlapping bursts share what's free
+      m.visible = true;
+      m.position.set(x + (Math.random() - 0.5) * 1.2, 0.8, z);
+      m.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3);
+      shards.push({
+        m,
+        vel: new THREE.Vector3((Math.random() - 0.5) * 9, 3 + Math.random() * 7, (Math.random() - 0.5) * 6),
+        ang: new THREE.Vector3((Math.random() - 0.5) * 12, (Math.random() - 0.5) * 12, (Math.random() - 0.5) * 12),
+        life: 0.9 + Math.random() * 0.4,
+      });
+    }
+  }
+
+  function gainShield() {
+    shieldOn = true;
+    aura.visible = true;
+    syncAmmo();
+    showStamp(1, { jp: 'バリア', word: 'SHIELD ARMED', cls: 't3' }, 0);
+    audio.shieldGain();
+    inkSlap(0.08);
+  }
+
+  function breakCrate(cr) {
+    cr.live = false;
+    cr.group.visible = false;
+    cratesBroken++;
+    const cx = LANE_X[cr.lane] + world.bendX(cr.z);
+    shatterCrate(cx, cr.z);
+    audio.crateBreak();
+    score += CRATE_PTS;
+    // the drop: a shield if you're bare (sometimes), ammo otherwise
+    if (!shieldOn && Math.random() < SHIELD_CHANCE) {
+      gainShield();
+    } else {
+      ammo = Math.min(AMMO_MAX, ammo + AMMO_PER_CRATE);
+      syncAmmo();
+      showStamp(Math.sign(cx - player.group.position.x) || 1,
+        { jp: '弾薬', word: 'AMMO +' + AMMO_PER_CRATE, cls: 't1' }, CRATE_PTS);
+      audio.pickup();
+    }
+  }
+
+  /* a shot clears a car off the road — fewer points than shaving it, but a way out */
+  function blastCar(c) {
+    c.dead = true;
+    carsBlasted++;
+    const pts = BLAST_PTS * combo;
+    score += pts;
+    boostMeter = Math.min(100, boostMeter + 6);
+    const side = Math.sign(c.lx - player.group.position.x) || 1;
+    showStamp(side, { jp: '撃破', word: 'BLASTED', cls: 't2' }, pts);
+    audio.blastHit();
+    inkSlap(0.08);
+    const dir = c.lane <= 1 ? -1 : 1;   // spin out toward the nearest edge
+    gsap.killTweensOf(c);
+    // killing a mid-lane-change tween strands its onComplete — release the lock
+    if (c.changing) { c.changing = false; laneChangerBusy = false; }
+    gsap.to(c, { lx: dir * 15, duration: 0.9, ease: 'power2.in' });
+    gsap.to(c.group.rotation, { y: dir * 2.6, duration: 0.9, ease: 'power1.in' });
+  }
+
+  /* the one-time barrier: eats a crash, spits the car aside */
+  function shieldSave(c) {
+    shieldOn = false;
+    aura.visible = false;
+    syncAmmo();
+    landGrace = SHIELD_GRACE;
+    c.dead = true;
+    const side = Math.sign(c.lx - player.group.position.x) || 1;
+    const dir = c.lane <= 1 ? -1 : 1;
+    gsap.killTweensOf(c);
+    if (c.changing) { c.changing = false; laneChangerBusy = false; }
+    gsap.to(c, { lx: dir * 15, duration: 0.8, ease: 'power2.in' });
+    gsap.to(c.group.rotation, { y: dir * 3, duration: 0.8, ease: 'power1.in' });
+    showStamp(side, { jp: 'バリア', word: 'SHIELD SAVED', cls: 't3' }, 0);
+    world.stampRoad('バリア', player.group.position.x, 2.5, { jp: true, width: 5 });
+    audio.shieldSave();
+    inkSlap(0.16);
+    if (!RM) fovKick = Math.min(9, fovKick + 4);
+  }
+
+  function updateShots(dt) {
+    for (const s of shots) {
+      if (!s.live) continue;
+      // swept test: the bolt covers [s.z, zPrev] this frame — anything inside
+      // that segment is hit, so fast bolts can't tunnel through a thin target
+      const zPrev = s.z;
+      s.z -= TRACER_SPEED * dt;
+      s.group.position.set(s.x + world.bendX(s.z), 0, s.z);
+      if (s.z < -280) { killShot(s); continue; }
+      if (state !== 'run') continue;   // frozen states: fly, but hit nothing
+      let spent = false;
+      for (const cr of crates) {
+        if (cr.live && cr.z > s.z - 2 && cr.z < zPrev + 2 &&
+            Math.abs(s.x - LANE_X[cr.lane]) < 1.5) {
+          breakCrate(cr);
+          killShot(s);
+          spent = true;
+          break;
+        }
+      }
+      if (spent) continue;
+      for (const c of active) {
+        if (!c.dead && c.z > s.z - c.halfL && c.z < zPrev + c.halfL &&
+            Math.abs(s.x - c.lx) < c.halfW + 0.5) {
+          blastCar(c);
+          killShot(s);
+          break;
+        }
+      }
+    }
+  }
+
+  function updateCrates(dt) {
+    for (const cr of crates) {
+      if (!cr.live) continue;
+      cr.z += speed * dt;
+      cr.group.position.set(LANE_X[cr.lane] + world.bendX(cr.z), 0, cr.z);
+      cr.box.rotation.y += dt * 1.1;   // idle spin so it reads as a pickup
+      if (cr.z > world.KILL_Z) { cr.live = false; cr.group.visible = false; continue; }
+      if (state === 'run' && !airborne &&
+          Math.abs(player.group.position.x - LANE_X[cr.lane]) < 1.6 && Math.abs(cr.z) < 1.8) {
+        breakCrate(cr);
+      }
+    }
+    // shard debris: gravity + world scroll, then gone
+    for (let i = shards.length - 1; i >= 0; i--) {
+      const sh = shards[i];
+      sh.vel.y -= 22 * dt;
+      sh.m.position.x += sh.vel.x * dt;
+      sh.m.position.y = Math.max(0.12, sh.m.position.y + sh.vel.y * dt);
+      sh.m.position.z += sh.vel.z * dt + speed * dt;
+      sh.m.rotation.x += sh.ang.x * dt;
+      sh.m.rotation.y += sh.ang.y * dt;
+      sh.life -= dt;
+      if (sh.life <= 0 || sh.m.position.z > world.KILL_Z) {
+        sh.m.visible = false;
+        shards.splice(i, 1);
+      }
+    }
+  }
+
+  const wrapAng = (a) => { a %= (Math.PI * 2); if (a > Math.PI) a -= Math.PI * 2; if (a < -Math.PI) a += Math.PI * 2; return a; };
+  const fullTurns = (a) => Math.floor(Math.abs(a) / (Math.PI * 2));
+
+  function trickName(distinct, fRoll, fFlip, fSpin) {
+    if (distinct >= 3) return '神業';                 // godlike: all three axes
+    if (distinct === 2) return 'コンボ';               // two-axis combo
+    if (fRoll >= 1) return fRoll >= 2 ? 'ダブルロール' : 'ロール';
+    if (fFlip >= 1) return fFlip >= 2 ? 'ダブルフリップ' : 'フリップ';
+    if (fSpin >= 1) return fSpin >= 2 ? 'ダブルスピン' : 'スピン';
+    return 'エア';
+  }
+
+  function land() {
+    const p = player.group.position;
+    p.y = 0;
+    airborne = false;
+    audio.landThump();
+    airTotal += airTime;
+
+    // near a multiple of 2π on every axis = a clean set-down; otherwise a botch
+    const cleanness = Math.max(Math.abs(wrapAng(rollAngle)), Math.abs(wrapAng(flipAngle)), Math.abs(wrapAng(spinAngle)));
+    const fRoll = fullTurns(rollAngle), fFlip = fullTurns(flipAngle), fSpin = fullTurns(spinAngle);
+    const totalFull = fRoll + fFlip + fSpin;
+    const distinct = (fRoll >= 1) + (fFlip >= 1) + (fSpin >= 1);
+    const trickMult = 1 + distinct * 0.5 + Math.max(0, totalFull - 1) * 0.25;
+
+    // settle from the WRAPPED angle so the grounded lerps unwind a small amount,
+    // never the full accumulated spin (18 rad → snap-back would look broken)
+    player.group.rotation.set(wrapAng(flipAngle), wrapAng(spinAngle), wrapAng(rollAngle));
+
+    if (cleanness < CLEAN_THRESH) {
+      const pts = Math.floor((150 + airTime * 250 + totalFull * 200) * trickMult * combo);
+      score += pts;
+      boostMeter = Math.min(100, boostMeter + 15 + 5 * distinct);
+      bestTrick = Math.max(bestTrick, Math.round(trickMult * 10));
+      showStamp(Math.sign(p.x) || 1,
+        { jp: trickName(distinct, fRoll, fFlip, fSpin),
+          word: totalFull >= 1 ? 'CLEAN' : 'AIR TIME',
+          cls: distinct >= 3 ? 't3' : (totalFull >= 1 || airTime > 1.15 ? 't2' : 't1') }, pts);
+      world.stampRoad('着地', p.x, 2.5, { jp: true, width: 3.6 });
+      inkSlap(distinct >= 2 ? 0.12 : 0.08);
+      audio.thunk(distinct >= 2);
+    } else {
+      // botched set-down: a tumble + a beat of lost steering — never a crash
+      wipeoutTimer = BOTCH_TIME;
+      landGrace = BOTCH_GRACE;
+      showStamp(Math.sign(p.x) || 1, { jp: '失敗', word: 'BOTCH', cls: 't1' }, 0);
+      inkSlap(0.06);
+      audio.thunk(false);
+    }
+    landGrace = Math.max(landGrace, 0.6);   // never below the base grace
+    el.airTrick.style.opacity = 0;
+  }
+
+  /* ---------- drift bank ---------- */
+  function endDrift() {
+    if (driftPts >= 80) {
+      const banked = Math.floor(driftPts);
+      score += banked;
+      driftTotal += banked;
+      showStamp(Math.sign(vx) || 1, { jp: 'ドリフト', word: 'DRIFT INK', cls: driftTime > 2 ? 't2' : 't1' }, banked);
+      audio.thunk(false);
+      if (driftTime > 1.1) boostMeter = Math.min(100, boostMeter + 12);
+    }
+    driftPts = 0;
+    driftTime = 0;
+    el.driftLive.style.opacity = 0;
+  }
+
   /* ---------- milestones & personal best ---------- */
   function checkMilestones() {
     if (score >= nextMilestone) {
@@ -2752,9 +4571,15 @@ button {
     if (e.repeat) { if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' '].includes(e.key)) e.preventDefault(); return; }
     audio.resume();
     keyState[e.code] = true;
+    // how-to-play: '?' toggles, Escape closes — handled before gameplay keys
+    if (e.key === '?' || (e.code === 'Slash' && e.shiftKey)) { toggleHelp(); e.preventDefault(); return; }
+    if (helpOpen) { if (e.code === 'Escape') closeHelp(); return; }
     switch (e.code) {
       case 'ArrowLeft': case 'KeyA': steerL = true; e.preventDefault(); break;
       case 'ArrowRight': case 'KeyD': steerR = true; e.preventDefault(); break;
+      case 'ArrowUp': case 'KeyW': wantBoost = true; e.preventDefault(); break;
+      case 'ShiftLeft': case 'ShiftRight': case 'Space': driftHeld = true; e.preventDefault(); break;
+      case 'KeyF': fire(); break;
       case 'KeyM': toggleMute(); break;
       case 'KeyP': togglePause(); break;
       case 'KeyR':
@@ -2772,38 +4597,49 @@ button {
     keyState[e.code] = false;
     if (e.code === 'ArrowLeft' || e.code === 'KeyA') steerL = false;
     if (e.code === 'ArrowRight' || e.code === 'KeyD') steerR = false;
+    if (e.code === 'ArrowUp' || e.code === 'KeyW') wantBoost = false;
+    if (e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'Space') driftHeld = false;
     if (state === 'intro') holdEnd();
   });
 
-  /* touch: hold to start, then left/right halves steer */
-  let touchSteer = 0;
-  function touchXToSteer(t) {
-    touchSteer = (t.clientX < window.innerWidth / 2) ? -1 : 1;
-  }
+  /* touch: on-screen buttons steer & drift (wired below). A bare-screen touch
+     only drives the intro hold-to-start ritual and unlocks the audio context —
+     the old "screen-half steer / two-finger drift" scheme was the thing mobile
+     players couldn't work out, so it's replaced by explicit buttons. */
+  let touchSteer = 0;   // retained only for the `|| touchSteer` fallback in updatePlayer
   const onButton = (e) => !!(e.target && e.target.closest && e.target.closest('button'));
   window.addEventListener('touchstart', (e) => {
-    if (onButton(e)) return;
-    e.preventDefault();
+    if (onButton(e)) return;               // control buttons handle their own touches
     audio.resume();
-    if (state === 'intro') { holdStart(); return; }
-    if (state === 'results') return;
-    touchXToSteer(e.touches[0]);
+    if (state === 'intro') { e.preventDefault(); holdStart(); }
   }, { passive: false });
-  window.addEventListener('touchmove', (e) => {
-    if (state === 'run' || state === 'starting') {
-      e.preventDefault();
-      touchXToSteer(e.touches[0]);
-    }
-  }, { passive: false });
-  window.addEventListener('touchend', (e) => {
-    if (state === 'intro') holdEnd();
-    if (e.touches.length === 0) touchSteer = 0;
-    else touchXToSteer(e.touches[0]);
-  });
-  window.addEventListener('touchcancel', () => {
-    touchSteer = 0;
-    if (state === 'intro') holdEnd();
-  });
+  window.addEventListener('touchend', () => { if (state === 'intro') holdEnd(); });
+  window.addEventListener('touchcancel', () => { if (state === 'intro') holdEnd(); });
+
+  /* on-screen control pad: press = hold, release = let go. In the air the same
+     three buttons become trick controls (roll / spin), exactly like the keys. */
+  function bindHold(id, on, off) {
+    const b = document.getElementById(id);
+    if (!b) return;
+    const press = (e) => { e.preventDefault(); audio.resume(); on(); };
+    const release = (e) => { if (e && e.cancelable) e.preventDefault(); off(); };
+    b.addEventListener('pointerdown', press);
+    b.addEventListener('pointerup', release);
+    b.addEventListener('pointerleave', release);
+    b.addEventListener('pointercancel', release);
+  }
+  bindHold('btn-left',  () => { steerL = true; },   () => { steerL = false; });
+  bindHold('btn-right', () => { steerR = true; },   () => { steerR = false; });
+  bindHold('btn-drift', () => { driftHeld = true; }, () => { driftHeld = false; });
+  bindHold('btn-fire',  () => { fire(); },           () => {});   // tap = one shot
+
+  /* on-screen boost trigger (coarse pointers) */
+  const boostOn = (e) => { e.preventDefault(); audio.resume(); wantBoost = true; };
+  const boostOff = () => { wantBoost = false; };
+  el.boostBtn.addEventListener('pointerdown', boostOn);
+  el.boostBtn.addEventListener('pointerup', boostOff);
+  el.boostBtn.addEventListener('pointercancel', boostOff);
+  el.boostBtn.addEventListener('pointerleave', boostOff);
   window.addEventListener('mousedown', (e) => {
     if (state === 'intro' && !onButton(e)) holdStart();
   });
@@ -2827,6 +4663,51 @@ button {
   syncMuteBtn();
   el.muteBtn.addEventListener('click', () => { audio.init(); audio.resume(); toggleMute(); });
 
+  /* music toggle (independent of SFX). Default OFF — the user wants racing
+     SOUND EFFECTS, not a soundtrack; the button brings the beat back on demand. */
+  let musicOn = store.get('hiyari-music') === '1';
+  audio._musicPref = musicOn;
+  function syncMusicBtn() {
+    el.musicBtn.textContent = musicOn ? 'MUSIC ON' : 'MUSIC OFF';
+    el.musicBtn.classList.toggle('muted', !musicOn);
+  }
+  syncMusicBtn();
+  el.musicBtn.addEventListener('click', () => {
+    audio.init();
+    audio.resume();
+    musicOn = !musicOn;
+    store.set('hiyari-music', musicOn ? '1' : '0');
+    audio.setMusicOn(musicOn);
+    syncMusicBtn();
+    audio.uiBlip();
+  });
+
+  /* how-to-play overlay — freezes the drive (helpOpen gate in frame()) so a
+     player can read the controls without the car ploughing on without them */
+  const helpEl = document.getElementById('help');
+  function openHelp() {
+    if (helpOpen) return;
+    helpOpen = true;
+    clearInputs();
+    // freeze GSAP too — otherwise tweens and delayedCalls (e.g. crash → results)
+    // keep firing on GSAP's own ticker behind the overlay. Skip if already paused.
+    if (!paused) gsap.globalTimeline.pause();
+    if (helpEl) helpEl.setAttribute('aria-hidden', 'false');
+    audio.init(); audio.resume(); audio.duck(true); audio.uiBlip();
+  }
+  function closeHelp() {
+    if (!helpOpen) return;
+    helpOpen = false;
+    if (!paused) gsap.globalTimeline.resume();
+    if (helpEl) helpEl.setAttribute('aria-hidden', 'true');
+    audio.duck(paused);
+    last = performance.now();   // don't fold the frozen span into the next dt
+  }
+  function toggleHelp() { helpOpen ? closeHelp() : openHelp(); }
+  document.getElementById('help-btn').addEventListener('click', () => { audio.init(); openHelp(); });
+  document.getElementById('help-close').addEventListener('click', closeHelp);
+  if (helpEl) helpEl.addEventListener('pointerdown', (e) => { if (e.target === helpEl) closeHelp(); });
+
   /* pause — gameplay GSAP tweens (lane changes, blinkers) freeze with it */
   function togglePause() {
     if (state !== 'run') return;
@@ -2846,6 +4727,8 @@ button {
     steerL = false;
     steerR = false;
     touchSteer = 0;
+    wantBoost = false;
+    driftHeld = false;
   }
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
@@ -2872,13 +4755,62 @@ button {
 
   function updateRun(dt, raw, now) {
     baseSpeed = Math.min(VMAX, baseSpeed + ACCEL * dt);
-    speed = baseSpeed * (fever ? 1.12 : 1);
+
+    // boost can't fire mid-air — up-arrow there is a FLIP, not a burn
+    boosting = wantBoost && boostMeter > 0 && !airborne;
+    if (boosting) boostMeter = Math.max(0, boostMeter - 34 * dt);
+    if (boosting && !wasBoosting && !RM) fovKick = Math.min(8, fovKick + 4);   // launch snap
+    wasBoosting = boosting;
+
+    // overdrive: hold boost flat-out long enough to break into a flow state.
+    // arm only builds while NOT yet in overdrive (stays bounded), and resets on
+    // every drop so re-entry must earn a fresh sustain window — no free re-pop.
+    if (!overdrive) {
+      if (speedNorm > OD_ENTER_N && boosting) overdriveArm = Math.min(OD_ARM, overdriveArm + dt);
+      else overdriveArm = Math.max(0, overdriveArm - dt * 2);
+      if (overdriveArm >= OD_ARM) {
+        overdrive = true;
+        showStamp(1, { jp: 'オーバードライブ', word: 'OVERDRIVE', cls: 't3' }, 0);
+        inkSlap(0.1);
+        if (!RM) fovKick = Math.min(9, fovKick + 3);
+      }
+    } else if (speedNorm < OD_EXIT_N || boostMeter <= 0) {
+      overdrive = false;
+      overdriveArm = 0;
+    }
+    if (overdrive) overdriveTime += dt;
+
+    // slingshot burst decays over its window — eased (f·(2−f) holds the peak
+    // early, tapers late) so the burst melts away instead of sagging
+    if (slingTimer > 0) slingTimer = Math.max(0, slingTimer - dt);
+    const sf = slingTimer / SLING_TIME;
+    const slingMult = slingTimer > 0 ? 1 + (SLING_MULT - 1) * sf * (2 - sf) : 1;
+
+    // the speed the systems ASK for…
+    const speedTarget = baseSpeed * (fever ? 1.12 : 1) * (boosting ? 1.42 : 1) *
+            (1 + 0.05 * draftCharge) * slingMult * (overdrive ? OD_SPEED : 1);
+    // …and the speed the car actually DOES. Asymmetric chase: surges arrive
+    // fast (feels responsive) but decay is slow (never the sudden "why am I
+    // slowing down" jolt after a pass — the user's exact complaint).
+    const chase = speedTarget > speed ? 5.5 : 1.6;
+    speed += (speedTarget - speed) * (1 - Math.exp(-chase * dt));
     speedNorm = Math.max(0, Math.min(1, (speed - V0) / (VMAX - V0)));
     topSpeed = Math.max(topSpeed, speed * KMH);
 
-    score += speed * dt * (fever ? 2 : 1);
+    const sm = Math.min(SCORE_MULT_CAP, (fever ? 2 : 1) * (boosting ? 1.5 : 1) * (overdrive ? OD_SCORE : 1));
+    score += speed * dt * sm;
     dist += speed * dt;
     if (fever) feverTime += dt;
+
+    // turning points arrive on their own schedule
+    if (!curveActive) {
+      curveTimer -= dt;
+      if (curveTimer <= 0) startCurve();
+    }
+    rampTimer -= dt;
+    if (rampTimer <= 0) { spawnRamp(); rampTimer = 24 + Math.random() * 16; }
+    crateTimer -= dt;
+    if (crateTimer <= 0) { spawnCrate(); crateTimer = 10 + Math.random() * 8; }
 
     // tier ladder
     for (let i = TIER_AT.length - 1; i > tier; i--) {
@@ -2906,42 +4838,152 @@ button {
     if (spawnTimer <= 0) {
       trySpawn();
       spawnTimer = (1.7 - density * 1.05) * (0.75 + Math.random() * 0.5);
+      if (Math.abs(curveK.v) > CORNER_MIN) spawnTimer *= 1.4;   // thin traffic through hard corners
     }
 
     // HUD throttles
     if (now - hudScoreAt > 0.08) { hudScoreAt = now; syncScore(); }
-    if (now - hudSpeedAt > 0.12) { hudSpeedAt = now; el.speedNum.textContent = Math.round(speed * KMH); }
+    if (now - hudSpeedAt > 0.12) {
+      hudSpeedAt = now;
+      el.speedNum.textContent = Math.round(speed * KMH);
+      el.boostFill.style.transform = 'scaleX(' + (boostMeter / 100).toFixed(3) + ')';
+      el.draftCharge.style.transform = 'scaleX(' + draftCharge.toFixed(3) + ')';
+      el.overdriveTag.style.opacity = overdrive ? '1' : '0';
+      if (!RM) {
+        const inten = Math.max(0, Math.min(1, speedNorm * 0.6 + (boosting ? 0.3 : 0) + (overdrive ? 0.4 : 0)));
+        el.speedLines.style.opacity = speedNorm > 0.30 ? (inten * 0.5).toFixed(3) : '0';
+        el.speedLines.style.transform = 'scale(' + (1 + inten * 0.14).toFixed(3) + ')';
+      }
+      // night vignette deepens with speed — frames the road, smooths the edges
+      el.vignette.style.opacity = (0.16 + speedNorm * 0.36).toFixed(3);
+    }
 
-    audio.setDrive(speedNorm, vx / STEER_VMAX, tier);
+    audio.setDrive(speedNorm, vx / STEER_VMAX, tier, boosting ? 1 : 0);
   }
 
   function updatePlayer(dt, raw) {
     const steer = (steerR ? 1 : 0) - (steerL ? 1 : 0) || touchSteer;
-    const target = steer * STEER_VMAX;
-    vx += (target - vx) * (1 - Math.exp(-7 * dt));
+    const steerSign = Math.sign(steer);
     const p = player.group.position;
+
+    // drift: rear steps out, lateral authority jumps, the road gets inked (ground only)
+    drifting = driftHeld && state === 'run' && !airborne &&
+      (steer !== 0 || Math.abs(vx) > 5);
+    if (drifting && !wasDrifting) audio.tyreChirp();   // the bark as rubber lets go
+    wasDrifting = drifting;
+    // drifting INTO a live corner is the cornering skill — grip + apex ink
+    apexDrift = drifting && Math.abs(curveK.v) > CORNER_MIN && steerSign === Math.sign(curveK.v);
+
+    // fumbled landing = a beat of lost steering. scale the TARGET (dt-invariant,
+    // true 35% authority) — multiplying vx each frame would compound to ~6%.
+    const target = steer * STEER_VMAX * (drifting ? 1.65 : 1) * (airborne ? AIR_STEER : 1) *
+      (wipeoutTimer > 0 ? BOTCH_STEER : 1);
+    vx += (target - vx) * (1 - Math.exp(-(drifting ? 5.2 : 7) * dt));
+
+    // centrifugal push: a corner shoves you toward the outside wall. capped BELOW drift
+    // authority (26.4) so a committed drift can always hook the line back inside.
+    let cf = curveK.v * speed * speed * CF_K;
+    cf = Math.max(-CF_MAX, Math.min(CF_MAX, cf));
+    if (airborne) cf *= CF_AIR;                 // don't shove landings around
+    if (apexDrift) cf *= (1 - GRIP_CANCEL);     // drift grip cancels most of the push
+    p.x -= cf * dt;                             // BEFORE the clamp: the wall always catches first
+
     p.x += vx * dt;
     if (p.x > X_CLAMP) { p.x = X_CLAMP; vx = Math.min(0, vx); }
     if (p.x < -X_CLAMP) { p.x = -X_CLAMP; vx = Math.max(0, vx); }
 
-    // body language: bank into the change, tremble with speed
-    const bank = -vx * 0.021;
-    player.group.rotation.z += (bank - player.group.rotation.z) * (1 - Math.exp(-9 * dt));
-    player.group.rotation.y = -vx * 0.012;
-    p.y = Math.sin(clockT * 52) * 0.004 * (0.4 + speedNorm);
+    if (airborne) {
+      // in the air the SAME keys become trick controls — continuous rotation you "fly"
+      p.y += vyAir * dt;
+      vyAir -= 20 * dt;
+      airTime += dt;
+      if (steerSign) { rollAngle += ROLL_RATE * steerSign * dt; lastTrickSpin = steerSign; }
+      if (wantBoost) flipAngle += FLIP_RATE * dt;                 // ↑ = flip (no boost aloft)
+      if (driftHeld) spinAngle += SPIN_RATE * (lastTrickSpin || 1) * dt;
+      player.group.rotation.set(flipAngle, spinAngle, rollAngle); // air OWNS all three axes
+      // live trick readout
+      const rc = fullTurns(rollAngle), fc = fullTurns(flipAngle), sc = fullTurns(spinAngle);
+      let lbl = '';
+      if (rc) lbl += 'ロール×' + rc + ' ';
+      if (fc) lbl += 'フリップ×' + fc + ' ';
+      if (sc) lbl += 'スピン×' + sc + ' ';
+      el.airTrick.textContent = lbl || 'エア';
+      el.airTrick.style.opacity = 1;
+      if (p.y <= 0 && vyAir < 0) land();
+    } else {
+      landGrace = Math.max(0, landGrace - dt);
+      if (wipeoutTimer > 0) wipeoutTimer -= dt;
+      player.group.rotation.x += (0 - player.group.rotation.x) * (1 - Math.exp(-8 * dt));
+      p.y = Math.sin(clockT * 52) * 0.004 * (0.4 + speedNorm);
+
+      // body language: in a slide the tail steps out and the nose COUNTER-STEERS
+      // (points into the flick, opposite the way the car is sliding) — the classic
+      // drift pose — while a corner points the whole car into the bend.
+      let yaw = -vx * (drifting ? 0.052 : 0.012) - curveK.v * PLYR_YAW_K;
+      if (drifting) yaw += steerSign * 0.22;   // counter-steer flick: nose leads the drift
+      yaw = Math.max(-0.68, Math.min(0.68, yaw));
+      const yawEase = drifting ? 12 : 9;       // the slide breaks fast, settles slow
+      player.group.rotation.y += (yaw - player.group.rotation.y) * (1 - Math.exp(-yawEase * dt));
+      const bank = -vx * (drifting ? 0.03 : 0.021);
+      player.group.rotation.z += (bank - player.group.rotation.z) * (1 - Math.exp(-9 * dt));
+    }
+
+    // skid ink + drift ledger (ground)
+    if (drifting && Math.abs(vx) > 6) {
+      driftTime += dt;
+      driftPts += speed * dt * 2;
+      skidTimer -= dt;
+      if (skidTimer <= 0) {
+        skidTimer = 0.055;
+        const y = player.group.rotation.y;
+        world.dropSkid(p.x - 0.8, 2.0, y);
+        world.dropSkid(p.x + 0.8, 2.0, y);
+      }
+      audio.setDrift(Math.min(1, Math.abs(vx) / 22));
+      el.driftLive.style.opacity = 1;
+      el.driftLivePts.textContent = '+' + Math.floor(driftPts);
+    } else {
+      if (driftTime > 0) endDrift();
+      audio.setDrift(0);
+    }
+
+    // the armed shield breathes around the car
+    if (shieldOn) {
+      aura.rotation.y += dt * 1.6;
+      const as = 1 + Math.sin(clockT * 5) * 0.05;
+      aura.scale.set(as, 1, as);
+    }
+
+    // apex ink accrues while you hold the drift through a corner
+    if (apexDrift) {
+      cornerApex += speed * dt * (Math.abs(curveK.v) / 1e-4) * APEX_K;
+      el.apexLive.style.opacity = 1;
+      el.apexLivePts.textContent = Math.floor(cornerApex);
+    } else {
+      el.apexLive.style.opacity = 0;
+    }
   }
 
   function updateTraffic(dt) {
     const px = player.group.position.x;
+    draftedThisFrame = false;
     for (let i = active.length - 1; i >= 0; i--) {
       const c = active[i];
+      c.isDraft = false;
       c.z += (speed - c.speed) * dt;
       c.group.position.z = c.z;
+      c.group.position.x = c.lx + world.bendX(c.z);
+
+      // blasted / shield-shoved cars are ghosts: they spin off and interact with nothing
+      if (c.dead) {
+        if (c.z > world.KILL_Z) { releaseCar(c); active.splice(i, 1); }
+        continue;
+      }
 
       tryLaneChange(c, dt);
 
       // danger telegraph: taillights bloom when you share a lane path
-      const conflict = c.z > -95 && c.z < -6 && Math.abs(c.group.position.x - px) < 1.7;
+      const conflict = c.z > -95 && c.z < -6 && Math.abs(c.lx - px) < 1.7;
       const targetGlow = conflict ? 3.2 : 1.4;
       c.baseTail += (targetGlow - c.baseTail) * (1 - Math.exp(-6 * dt));
       c.tail.bar.material.emissiveIntensity = c.baseTail;
@@ -2949,16 +4991,25 @@ button {
 
       const halfLsum = c.halfL + player.halfL;
       const halfWsum = c.halfW + player.halfW;
-      const dx = Math.abs(c.group.position.x - px);
+      const dx = Math.abs(c.lx - px);
       const dz = Math.abs(c.z);
 
-      // track the tightest lateral gap through the overlap window
-      if (dz < halfLsum + 2.5) {
+      // slipstream pocket: tucked close behind a car you're catching, not yet passed
+      const gapAhead = -c.z;
+      if (!c.passed && c.z < 0 && gapAhead > DRAFT_ZMIN && gapAhead < DRAFT_ZMAX &&
+          dx < DRAFT_LATERAL && speed > c.speed) {
+        c.isDraft = true;
+        draftedThisFrame = true;
+        if (draftCharge >= SLING_MIN) c.drafted = true;   // armed — passing it fires a slingshot
+      }
+
+      // track the tightest lateral gap through the overlap window (grounded only)
+      if (dz < halfLsum + 2.5 && !airborne) {
         c.minGap = Math.min(c.minGap, dx - halfWsum);
       }
 
       // the inhale before the tightest passes
-      if (!c.passed && !c.swelled && c.z < 0) {
+      if (!c.passed && !c.swelled && c.z < 0 && !airborne) {
         const rel = speed - c.speed;
         if (rel > 1) {
           const tta = (-c.z - halfLsum) / rel;
@@ -2969,8 +5020,11 @@ button {
         }
       }
 
-      // collision (0.88/0.86 forgiveness — deaths must feel earned)
-      if (state === 'run' && dx < halfWsum * 0.88 && dz < halfLsum * 0.86) {
+      // collision (0.88/0.86 forgiveness; airborne cars fly clean over traffic).
+      // An armed shield eats the crash once and shoves the car off the road.
+      if (state === 'run' && !airborne && landGrace <= 0 &&
+          dx < halfWsum * 0.88 && dz < halfLsum * 0.86) {
+        if (shieldOn) { shieldSave(c); continue; }
         crash(c);
         return;
       }
@@ -2986,11 +5040,16 @@ button {
         active.splice(i, 1);
       }
     }
+
+    // charge the draft while tucked in; bleed it out once you leave the pocket
+    if (draftedThisFrame) draftCharge = Math.min(1, draftCharge + dt / DRAFT_FULL);
+    else draftCharge = Math.max(0, draftCharge - dt / DRAFT_DECAY);
   }
 
   function updateOncoming(dt) {
     for (const o of oncoming) {
       o.g.position.z += (speed + o.speed) * dt;
+      o.g.position.x = o.lx + world.bendX(o.g.position.z);
       if (!o.played && o.g.position.z > 4) {
         o.played = true;
         if (state === 'run') audio.passby(-0.75);
@@ -3039,8 +5098,18 @@ button {
       chasePose(_pos, _look);
       camera.position.copy(_pos);
       camera.lookAt(_look);
+      if (!RM) {
+        // swing the whole view INTO the bend — this is what makes a corner read as a turn
+        const yawTarget = Math.max(-CAM_YAW_MAX, Math.min(CAM_YAW_MAX,
+          -curveK.v * CAM_YAW_K * (0.7 + 0.5 * speedNorm)));
+        camYaw += (yawTarget - camYaw) * (1 - Math.exp(-6 * raw));
+        camera.rotation.y += camYaw;
+        // bank into the curve; lean a touch with the slide
+        camera.rotation.z += -curveK.v * CAM_ROLL_K + (drifting ? -vx * 0.0011 : 0);
+      }
       fovKick = Math.max(0, fovKick - raw * 9);
-      camera.fov = 62 + 26 * speedNorm + fovKick;
+      boostFov += ((boosting ? 9 : 0) - boostFov) * (1 - Math.exp(-6 * raw));
+      camera.fov = 62 + 26 * speedNorm + fovKick + boostFov;
     }
     camera.updateProjectionMatrix();
   }
@@ -3061,16 +5130,24 @@ button {
     requestAnimationFrame(frame);
     const raw = Math.min((nowMs - last) / 1000, 1 / 30);
     last = nowMs;
-    if (paused) { renderer.render(scene, camera); return; }
+    // touch controls only exist while actually driving — hides them under the
+    // intro/crash/results screens (which don't full-screen-cover on wide tablets)
+    document.body.classList.toggle('playing', state === 'run' || state === 'starting');
+    if (paused || helpOpen) { renderer.render(scene, camera); return; }
 
     const dt = raw * ts.v;
     clockT += raw;
     const now = nowMs / 1000;
 
+    world.curveK = curveK.v;
+
     if (state === 'run') {
       updateRun(dt, raw, now);
       updatePlayer(dt, raw);
       updateTraffic(dt);
+      updateRamps(dt);
+      updateShots(dt);
+      updateCrates(dt);
     } else if (state === 'starting') {
       updatePlayer(dt, raw);
       for (const c of active) {
@@ -3084,14 +5161,17 @@ button {
         c.z += (speed - c.speed) * dt;
         c.group.position.z = c.z;
       }
+      updateShots(dt);    // both guard their run-only interactions internally —
+      updateCrates(dt);   // props keep scrolling instead of freezing mid-road
     }
 
     if (state !== 'boot' && state !== 'intro') {
-      world.scroll(speed * dt);
+      world.scroll(speed * dt, dt);
       updateOncoming(dt);
     }
 
     updateAmbient(raw);
+    world.twinkle(clockT);
     updateCamera(raw);
     renderer.render(scene, camera);
   }
@@ -3105,6 +5185,9 @@ button {
     if (state !== 'boot') return;
     state = 'intro';
     gsap.set(el.results, { y: 0, yPercent: 102 });   // clear the parsed CSS px offset
+    if (window.matchMedia && matchMedia('(pointer: coarse)').matches) {
+      $('#start-keys').textContent = 'hold to drive · then use the ◀ ▶ · DRIFT · 加速 buttons · tap HOW TO PLAY';
+    }
     // paint everything that needs type (fonts are ready now)
     player.paintLivery(1, false);
     world.kmPosts.forEach((m) => world.paintKmPost(m, ((dist + Math.abs(m.position.z)) * KM).toFixed(1)));
@@ -3129,6 +5212,15 @@ button {
       inkSlap(0.1);
     },
     testFever: (on) => (on ? enterFever() : exitFever()),
+    testCurve: (k) => { gsap.killTweensOf(curveK); gsap.to(curveK, { v: k, duration: 2 }); },
+    testRamp: () => {
+      const r = ramps.find((x) => !x.live);
+      if (!r) return;
+      r.live = true;
+      r.lane = LANE_X.reduce((b, x, i) => (Math.abs(x - player.group.position.x) < Math.abs(LANE_X[b] - player.group.position.x) ? i : b), 0);
+      r.z = -100;
+      r.group.visible = true;
+    },
     snap: () => ({
       state,
       px: player.group.position.x,
@@ -3136,6 +5228,31 @@ button {
       combo,
       nearMisses,
       score: Math.floor(score),
+      boostMeter: Math.round(boostMeter),
+      boosting,
+      drifting,
+      airborne,
+      curve: curveK.v,
+      curveHard,
+      camYaw: Math.round(camYaw * 1000) / 1000,
+      driftTotal: Math.floor(driftTotal),
+      airTotal: Math.round(airTotal * 10) / 10,
+      draftCharge: Math.round(draftCharge * 100) / 100,
+      slingTimer: Math.round(slingTimer * 100) / 100,
+      overdrive,
+      overdriveTime: Math.round(overdriveTime * 10) / 10,
+      apexDrift,
+      cornerApex: Math.round(cornerApex),
+      apexClears,
+      slingshots,
+      wipeoutTimer: Math.round(wipeoutTimer * 100) / 100,
+      trick: { roll: rollAngle, flip: flipAngle, spin: spinAngle },
+      bestTrick,
+      ammo,
+      shieldOn,
+      cratesBroken,
+      carsBlasted,
+      crates: crates.filter((c) => c.live).map((c) => ({ lane: c.lane, z: Math.round(c.z) })),
       cars: active.map((c) => ({
         x: Math.round(c.group.position.x * 100) / 100,
         z: Math.round(c.z * 10) / 10,

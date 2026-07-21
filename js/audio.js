@@ -8,14 +8,23 @@
 (function () {
   'use strict';
 
-  // ── ALL SOUND DISABLED (user request, 2026-07-16) ────────────────
-  // The engine pitch climbing with speed + the wind/screech/boost
-  // white-noise beds + the procedural music stacked into "too much
-  // noise". Setting this to true stops the audio engine from ever
-  // starting, so every audio.* call in main.js becomes a no-op
-  // (each already guards on `if (!this.ok) return;`).
-  // Flip back to false to restore the full procedural soundtrack.
-  const AUDIO_DISABLED = true;
+  // ── RACING SFX ENABLED (user request, 2026-07-19) ────────────────
+  // Earlier the engine + wind + screech + boost beds + the procedural
+  // MUSIC all stacked into "too much noise", so everything was killed.
+  // It's back on now, but rebalanced as *sound effects, not music*:
+  //   • the wind / boost / screech beds are pulled WAY down (see the
+  //     BED_* mix constants below) so they colour the drive instead of
+  //     drowning it;
+  //   • the engine is the hero — it revs cleanly with speed;
+  //   • MUSIC now defaults OFF (main.js) so a fresh player hears pure
+  //     racing SFX. The MUSIC button still brings the beat back if
+  //     wanted. Flip AUDIO_DISABLED to true to silence everything.
+  const AUDIO_DISABLED = false;
+
+  // bed mix — the constant "hiss" layers, kept low so SFX read clean
+  const BED_WIND   = 0.14;   // was 0.34 — wind roar at top speed
+  const BED_BOOST  = 0.15;   // was 0.26 — boost turbine layer
+  const BED_SCREECH = 0.17;  // was 0.20 — tyre screech ceiling
 
   const PENTA = [261.63, 293.66, 329.63, 392.0, 440.0]; // C D E G A
 
@@ -319,7 +328,7 @@
     setDrift(i) {
       if (!this.ok) return;
       const t = this.ctx.currentTime;
-      this.screechGain.gain.setTargetAtTime(i * 0.2, t, 0.06);
+      this.screechGain.gain.setTargetAtTime(i * BED_SCREECH, t, 0.06);
       this.screechBp.frequency.setTargetAtTime(880 + i * 520 + Math.sin(t * 13) * 60, t, 0.05);
     }
 
@@ -377,8 +386,8 @@
       this.engFilter.frequency.setTargetAtTime(400 + speedNorm * 2400 + b * 900, t, 0.1);
       this.engGain.gain.setTargetAtTime(0.075 + speedNorm * 0.05 + b * 0.02, t, 0.1);
       this.windFilter.frequency.setTargetAtTime(300 + speedNorm * 900, t, 0.15);
-      this.windGain.gain.setTargetAtTime(speedNorm * speedNorm * 0.34 + b * 0.1, t, 0.15);
-      this.boostGain.gain.setTargetAtTime(b * 0.26, t, 0.09);
+      this.windGain.gain.setTargetAtTime(speedNorm * speedNorm * BED_WIND + b * 0.06, t, 0.15);
+      this.boostGain.gain.setTargetAtTime(b * BED_BOOST, t, 0.09);
     }
 
     _burst(dur) {
@@ -499,6 +508,174 @@
         o.connect(g); g.connect(this.master);
         o.start(t + dt); o.stop(t + dt + 0.55);
       });
+    }
+
+    /* Corner-ahead call — a panned two-tone "rally note" that rises for a
+       right-hander, falls for a left-hander, so you HEAR the turn coming.
+       dir: -1 left, +1 right. hard: burns a brighter, longer tone. */
+    cornerAlert(dir, hard) {
+      if (!this.ok) return;
+      const ctx = this.ctx, t = ctx.currentTime;
+      const up = dir > 0;
+      const f0 = up ? 520 : 760;
+      const f1 = up ? 780 : 500;
+      const o = ctx.createOscillator();
+      o.type = 'triangle';
+      o.frequency.setValueAtTime(f0, t);
+      o.frequency.linearRampToValueAtTime(f1, t + 0.16);
+      const g = ctx.createGain();
+      const peak = hard ? 0.2 : 0.13;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(peak, t + 0.03);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + (hard ? 0.5 : 0.34));
+      const p = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+      o.connect(g);
+      if (p) { p.pan.value = Math.max(-0.7, Math.min(0.7, dir * 0.6)); g.connect(p); p.connect(this.master); }
+      else g.connect(this.master);
+      o.start(t); o.stop(t + (hard ? 0.55 : 0.4));
+    }
+
+    /* Front cannon: punchy square drop + high click — a pop, not a laser */
+    shoot() {
+      if (!this.ok) return;
+      const ctx = this.ctx, t = ctx.currentTime;
+      const o = ctx.createOscillator();
+      o.type = 'square';
+      o.frequency.setValueAtTime(680, t);
+      o.frequency.exponentialRampToValueAtTime(130, t + 0.1);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.2, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+      o.connect(g); g.connect(this.master);
+      o.start(t); o.stop(t + 0.13);
+      const click = this._burst(0.02);
+      const hp = ctx.createBiquadFilter();
+      hp.type = 'highpass'; hp.frequency.value = 3200;
+      const cg = ctx.createGain();
+      cg.gain.setValueAtTime(0.14, t);
+      cg.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+      click.connect(hp); hp.connect(cg); cg.connect(this.master);
+    }
+
+    /* A shot connecting with a car: small dry explosion */
+    blastHit() {
+      if (!this.ok) return;
+      const ctx = this.ctx, t = ctx.currentTime;
+      const src = this._burst(0.16);
+      const bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass'; bp.frequency.value = 750; bp.Q.value = 0.9;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.36, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+      src.connect(bp); bp.connect(g); g.connect(this.master);
+      const o = ctx.createOscillator();
+      o.frequency.setValueAtTime(95, t);
+      o.frequency.exponentialRampToValueAtTime(46, t + 0.16);
+      const og = ctx.createGain();
+      og.gain.setValueAtTime(0.5, t);
+      og.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+      o.connect(og); og.connect(this.master);
+      o.start(t); o.stop(t + 0.2);
+    }
+
+    /* Supply crate cracking open: two wood snaps over a low thunk */
+    crateBreak() {
+      if (!this.ok) return;
+      const ctx = this.ctx, t = ctx.currentTime;
+      [[1500, 0], [2500, 0.045]].forEach(([f, dtOff]) => {
+        const src = this._burst(0.12);
+        const bp = ctx.createBiquadFilter();
+        bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = 1.6;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, t);   // hold silent until this snap's turn
+        g.gain.setValueAtTime(0.28, t + dtOff);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dtOff + 0.06);
+        src.connect(bp); bp.connect(g); g.connect(this.master);
+      });
+      const o = ctx.createOscillator();
+      o.frequency.setValueAtTime(120, t);
+      o.frequency.exponentialRampToValueAtTime(66, t + 0.12);
+      const og = ctx.createGain();
+      og.gain.setValueAtTime(0.4, t);
+      og.gain.exponentialRampToValueAtTime(0.0001, t + 0.14);
+      o.connect(og); og.connect(this.master);
+      o.start(t); o.stop(t + 0.16);
+    }
+
+    /* Ammo pickup: two bright ascending blips */
+    pickup() {
+      if (!this.ok) return;
+      const ctx = this.ctx, t = ctx.currentTime;
+      [[1046.5, 0], [1568, 0.09]].forEach(([f, dtOff]) => {
+        const o = ctx.createOscillator();
+        o.type = 'triangle';
+        o.frequency.value = f;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, t + dtOff);
+        g.gain.exponentialRampToValueAtTime(0.14, t + dtOff + 0.015);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dtOff + 0.14);
+        o.connect(g); g.connect(this.master);
+        o.start(t + dtOff); o.stop(t + dtOff + 0.16);
+      });
+    }
+
+    /* Shield arming: rising shimmer sweep */
+    shieldGain() {
+      if (!this.ok) return;
+      const ctx = this.ctx, t = ctx.currentTime;
+      const o = ctx.createOscillator();
+      o.type = 'triangle';
+      o.frequency.setValueAtTime(440, t);
+      o.frequency.exponentialRampToValueAtTime(990, t + 0.3);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.16, t + 0.05);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+      o.connect(g); g.connect(this.master);
+      o.start(t); o.stop(t + 0.5);
+      const spark = this._burst(0.2);
+      const hp = ctx.createBiquadFilter();
+      hp.type = 'highpass'; hp.frequency.value = 6000;
+      const sg = ctx.createGain();
+      sg.gain.setValueAtTime(0.06, t);
+      sg.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
+      spark.connect(hp); hp.connect(sg); sg.connect(this.master);
+    }
+
+    /* The shield eating a crash: deep gong + glass shimmer */
+    shieldSave() {
+      if (!this.ok) return;
+      const ctx = this.ctx, t = ctx.currentTime;
+      const o = ctx.createOscillator();
+      o.frequency.setValueAtTime(200, t);
+      o.frequency.exponentialRampToValueAtTime(62, t + 0.55);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.8, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
+      o.connect(g); g.connect(this.master);
+      o.start(t); o.stop(t + 0.65);
+      const shimmer = this._burst(0.4);
+      const hp = ctx.createBiquadFilter();
+      hp.type = 'highpass'; hp.frequency.value = 2400;
+      const sg = ctx.createGain();
+      sg.gain.setValueAtTime(0.22, t);
+      sg.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+      shimmer.connect(hp); hp.connect(sg); sg.connect(this.master);
+    }
+
+    /* Tyre chirp — the short bark of rubber when a drift first breaks loose */
+    tyreChirp() {
+      if (!this.ok) return;
+      const ctx = this.ctx, t = ctx.currentTime;
+      const src = this._burst(0.09);
+      const bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass'; bp.Q.value = 3.4;
+      bp.frequency.setValueAtTime(760, t);
+      bp.frequency.exponentialRampToValueAtTime(1500, t + 0.08);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.24, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+      src.connect(bp); bp.connect(g); g.connect(this.master);
     }
 
     uiBlip() {

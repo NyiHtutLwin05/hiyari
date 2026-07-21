@@ -28,12 +28,18 @@
   /* ---------- v3 tuning: cornering / speed skills / stunts ---------- */
   // cornering — a bend the car must actively hold; drift is the tool
   const CORNER_MIN  = 1.2e-4;   // |curveK| above this = a "hard" corner (grip/apex/thinning)
-  const CF_K        = RM ? 14 : 18;   // centrifugal coefficient
-  const CF_MAX      = RM ? 16 : 22;   // hard cap — below drift authority (26.4) so drift always answers
+  // Centrifugal push is intentionally held BELOW plain steering authority
+  // (STEER_VMAX = 16) so ordinary left/right steering can always hold a corner.
+  // Earlier CF_MAX=22 > 16 shoved the car into the outside wall every corner —
+  // that was the "car always goes left, I can't control it" bug. Now a corner
+  // is a lean you steer through; drift (26.4 authority) just makes it effortless
+  // and scores the apex.
+  const CF_K        = RM ? 7 : 9;    // centrifugal coefficient (was 14 / 18)
+  const CF_MAX      = RM ? 9 : 11;   // hard cap, < STEER_VMAX so steering wins (was 16 / 22)
   const CF_AIR      = 0.30;     // centrifugal scale while airborne (don't shove landings)
   const GRIP_CANCEL = 0.55;     // fraction of push cancelled when drifting into the apex
-  const CAM_YAW_K   = 650;      // camera turn-in feel-term
-  const CAM_YAW_MAX = 0.11;     // rad (~6.3°) comfort cap
+  const CAM_YAW_K   = 820;      // camera turn-in feel-term (was 650 — read the corner harder)
+  const CAM_YAW_MAX = 0.16;     // rad (~9.2°) comfort cap (was 0.11 — a corner should feel like one)
   const CAM_ROLL_K  = 300;      // camera bank (was 380 — headroom for yaw)
   const PLYR_YAW_K  = 600;      // player nose points into the corner
   const APEX_K      = 0.6;      // apex-ink accrual rate
@@ -45,9 +51,9 @@
   const DRAFT_ZMIN    = 5;      // forward gap min (units ahead)
   const DRAFT_ZMAX    = 22;     // forward gap max
   const DRAFT_FULL    = 1.0;    // seconds to full charge
-  const DRAFT_DECAY   = 0.5;    // seconds to bleed out of the pocket
+  const DRAFT_DECAY   = 1.1;    // seconds to bleed out of the pocket (was 0.5 — gentler drop-off)
   const SLING_MIN     = 0.6;    // draft charge needed to arm a slingshot
-  const SLING_TIME    = 0.9;    // slingshot decay window, seconds
+  const SLING_TIME    = 1.5;    // slingshot decay window, seconds (was 0.9 — melt, don't sag)
   const SLING_MULT    = 1.18;   // peak slingshot speed mult, decays -> 1.0
   const OD_ARM        = 1.5;    // sustained boost@high-speed to arm overdrive
   const OD_ENTER_N    = 0.80;   // speedNorm to arm
@@ -65,6 +71,16 @@
   const BOTCH_TIME  = 0.7;      // wipeout control-loss window
   const BOTCH_STEER = 0.35;     // steer authority during wipeout (never zero)
   const BOTCH_GRACE = 0.9;      // landGrace on a botch — forgiving, never a crash
+
+  // arsenal — front cannon, supply crates, one-time crash shield
+  const AMMO_START = 3;
+  const AMMO_MAX   = 9;
+  const AMMO_PER_CRATE = 3;
+  const TRACER_SPEED = 170;     // units/s, relative to the player
+  const BLAST_PTS  = 150;       // × combo when a shot clears a car
+  const CRATE_PTS  = 250;       // flat ink for cracking a crate open
+  const SHIELD_CHANCE = 0.4;    // crate rolls a shield when you don't have one
+  const SHIELD_GRACE  = 1.4;    // post-save invulnerability window, seconds
 
   const fmt = (n) => Math.floor(n).toLocaleString('en-US');
   const store = {
@@ -102,6 +118,7 @@
   /* ---------- state ---------- */
   let state = 'boot';
   let paused = false;
+  let helpOpen = false;
   const ts = { v: 1 };                    // gameplay time scale (GSAP-tweened)
   let baseSpeed = 0, speed = 0, speedNorm = 0;
   let steerL = false, steerR = false, vx = 0;
@@ -118,7 +135,7 @@
 
   /* v2 systems: boost / drift / air / curves */
   let boostMeter = 0, wantBoost = false, boosting = false, boostFov = 0;
-  let driftHeld = false, drifting = false;
+  let driftHeld = false, drifting = false, wasDrifting = false;
   let driftPts = 0, driftTotal = 0, driftTime = 0, skidTimer = 0;
   let airborne = false, vyAir = 0, airTime = 0, airTotal = 0;
   let landGrace = 0;
@@ -134,6 +151,14 @@
   let overdrive = false, overdriveArm = 0, overdriveTime = 0, wasBoosting = false;
   let rollAngle = 0, flipAngle = 0, spinAngle = 0, lastTrickSpin = 0, wipeoutTimer = 0;
   let slingshots = 0, apexClears = 0, bestTrick = 10;   // bestTrick = ×mult*10 (10 => ×1.0)
+
+  /* v4 systems: cannon / supply crates / crash shield */
+  let ammo = AMMO_START, shieldOn = false;
+  let cratesBroken = 0, carsBlasted = 0;
+  const shots = [];             // pooled tracer bolts
+  const crates = [];            // pooled supply drops
+  const shards = [];            // crate-shatter debris in flight
+  let crateTimer = 9;
 
   player.group.position.set(LANE_X[2], 0, 0);
 
@@ -159,6 +184,10 @@
     speedLines: $('#speed-lines'), draftCharge: $('#draft-charge'),
     overdriveTag: $('#overdrive-tag'), apexLive: $('#apex-live'), apexLivePts: $('#apex-live-pts'),
     airTrick: $('#air-trick'),
+    turnSignal: $('#turn-signal'), turnArrow: $('#turn-arrow'), turnText: $('#turn-text'),
+    // v4 HUD
+    ammoPips: $('#ammo-pips'), shieldTag: $('#shield-tag'), vignette: $('#vignette'),
+    rCrate: $('#r-crate'), rBlast: $('#r-blast'),
     rSling: $('#r-sling'), rApex: $('#r-apex'), rTrick: $('#r-trick'), rOd: $('#r-od'),
   };
 
@@ -198,6 +227,22 @@
     }
     audio.tick();
   }
+
+  /* ---------- ammo pips ---------- */
+  const ammoPipEls = [];
+  (function buildAmmoPips() {
+    for (let i = 0; i < AMMO_MAX; i++) {
+      const p = document.createElement('span');
+      p.className = 'pip';
+      el.ammoPips.appendChild(p);
+      ammoPipEls.push(p);
+    }
+  })();
+  function syncAmmo() {
+    for (let i = 0; i < AMMO_MAX; i++) ammoPipEls[i].classList.toggle('on', i < ammo);
+    el.shieldTag.style.opacity = shieldOn ? '1' : '0';
+  }
+  syncAmmo();
 
   /* ---------- combo stripes ---------- */
   function syncStripes() {
@@ -339,10 +384,13 @@
   function releaseCar(car) {
     car.group.visible = false;
     gsap.killTweensOf(car);                 // lane-change lx tween
+    // if that kill caught a live lane change, its onComplete never fires —
+    // free the global lock or no car would ever signal again this run
+    if (car.changing) { car.changing = false; laneChangerBusy = false; }
     gsap.killTweensOf(car.group.position);
     gsap.killTweensOf(car.group.rotation);
     car.group.rotation.set(0, 0, 0);
-    car.isDraft = false; car.drafted = false; car.slingDone = false;
+    car.isDraft = false; car.drafted = false; car.slingDone = false; car.dead = false;
     (pools[car.typeIdx] || (pools[car.typeIdx] = [])).push(car);
   }
 
@@ -403,7 +451,7 @@
       car.minGap = Infinity;
       car.changing = false;
       car.baseTail = 1.4;
-      car.isDraft = false; car.drafted = false; car.slingDone = false;
+      car.isDraft = false; car.drafted = false; car.slingDone = false; car.dead = false;
       car.group.rotation.set(0, 0, 0);
       car.group.position.set(car.lx, 0, car.z);
       active.push(car);
@@ -500,8 +548,8 @@
     inkSlap(tierDef.mult === 3 ? 0.14 : 0.08);
 
     if (!RM) {
-      const dip = tierDef.mult === 3 ? 0.85 : 0.92;
-      gsap.timeline().to(ts, { v: dip, duration: 0.05 }).to(ts, { v: 1, duration: 0.14 });
+      // no time-dip here anymore — the old hitstop read as the game "suddenly
+      // slowing down" on every pass. The FOV kick alone sells the rush forward.
       fovKick = Math.min(6, fovKick + (tierDef.mult === 3 ? 3.5 : 2));
     }
 
@@ -521,9 +569,10 @@
     else player.paintLivery(combo, fever);
     syncStripes();
 
-    // flash the passed car's shell white for two frames
+    // flash the passed car's shell white for two frames (skip transparent
+    // ground-effect planes — flashing the tail streak paints the road white)
     car.group.traverse((o) => {
-      if (o.isMesh && o.material && o.material.color && !o.userData.flashing) {
+      if (o.isMesh && o.material && o.material.color && !o.material.transparent && !o.userData.flashing) {
         o.userData.flashing = true;
         const old = o.material;
         o.material = new THREE.MeshBasicMaterial({ color: 0xF2EFE5 });
@@ -559,6 +608,8 @@
     gsap.killTweensOf(curveK);
     curveActive = false;
     cornerApex = 0;
+    if (el.turnSignal) { gsap.killTweensOf(el.turnSignal); gsap.set(el.turnSignal, { opacity: 0 }); }
+    aura.visible = false;   // a crash means the shield wasn't armed — keep the wreck clean
 
     crashPos.copy(player.group.position);
     topSpeed = Math.max(topSpeed, speed * KMH);
@@ -619,6 +670,8 @@
     el.rAir.textContent = '0.0 s';
     el.rSling.textContent = '0';
     el.rApex.textContent = '0';
+    el.rCrate.textContent = '0';
+    el.rBlast.textContent = '0';
     el.rTrick.textContent = '×1.0';
     el.rOd.textContent = '0.0 s';
     el.rFever.textContent = '0.0 s';
@@ -654,6 +707,8 @@
       [el.rAir, { v: 0 }, airTotal, (o) => o.v.toFixed(1) + ' s'],
       [el.rSling, { v: 0 }, slingshots, (o) => String(Math.round(o.v))],
       [el.rApex, { v: 0 }, apexClears, (o) => String(Math.round(o.v))],
+      [el.rCrate, { v: 0 }, cratesBroken, (o) => String(Math.round(o.v))],
+      [el.rBlast, { v: 0 }, carsBlasted, (o) => String(Math.round(o.v))],
       [el.rTrick, { v: 0 }, bestTrick / 10, (o) => '×' + o.v.toFixed(1)],
       [el.rOd, { v: 0 }, overdriveTime, (o) => o.v.toFixed(1) + ' s'],
       [el.rFever, { v: 0 }, feverTime, (o) => o.v.toFixed(1) + ' s'],
@@ -674,7 +729,7 @@
       tl.fromTo(el.newRecord, { scale: 0, rotation: -20 },
         { scale: 1, rotation: -8, duration: 0.4, ease: 'back.out(5)', onStart: () => { audio.thunk(true); inkSlap(0.1); } }, 2.4);
     }
-    tl.call(() => el.restartBtn.focus(), null, 1.6);
+    tl.call(() => el.restartBtn.focus({ preventScroll: true }), null, 1.6);
   }
 
   /* ---------- restart: squeegee wipe, rolling in under a second ---------- */
@@ -726,7 +781,7 @@
 
     // v2 state
     boostMeter = 0; boosting = false; boostFov = 0;
-    drifting = false; driftPts = 0; driftTotal = 0; driftTime = 0;
+    drifting = false; wasDrifting = false; driftPts = 0; driftTotal = 0; driftTime = 0;
     airborne = false; vyAir = 0; airTime = 0; airTotal = 0;
     landGrace = 0;
     gsap.killTweensOf(curveK);
@@ -739,10 +794,22 @@
 
     // v3 state: cornering / speed skills / air tricks
     curveDir = 1; curveHard = false; cornerApex = 0; apexDrift = false; camYaw = 0;
+    if (el.turnSignal) { gsap.killTweensOf(el.turnSignal); gsap.set(el.turnSignal, { opacity: 0 }); }
     draftCharge = 0; draftedThisFrame = false; slingTimer = 0;
     overdrive = false; overdriveArm = 0; overdriveTime = 0; wasBoosting = false;
     rollAngle = 0; flipAngle = 0; spinAngle = 0; lastTrickSpin = 0; wipeoutTimer = 0;
     slingshots = 0; apexClears = 0; bestTrick = 10;
+
+    // v4 state: cannon / crates / shield
+    ammo = AMMO_START; shieldOn = false; aura.visible = false;
+    aura.scale.set(1, 1, 1);
+    cratesBroken = 0; carsBlasted = 0; crateTimer = 9;
+    for (const s of shots) killShot(s);
+    for (const cr of crates) { cr.live = false; cr.group.visible = false; }
+    for (const sh of shards) sh.m.visible = false;
+    shards.length = 0;
+    syncAmmo();
+    el.vignette.style.opacity = 0;
     gsap.killTweensOf(player.group.rotation);
     el.speedLines.style.opacity = RM ? '0.10' : '0';
     el.speedLines.style.transform = 'none';
@@ -912,12 +979,37 @@
     gsap.to(curveK, { v: mag, duration: tIn, ease: 'power1.inOut' });
     gsap.to(curveK, {
       v: 0, duration: tOut, ease: 'power1.inOut', delay: tIn + tHold,
-      onComplete: () => { curveActive = false; curveTimer = 9 + Math.random() * 10; evalApexClear(); },
+      onComplete: () => { curveActive = false; curveTimer = 9 + Math.random() * 10; evalApexClear(); hideTurnSignal(); },
     });
     // telegraph at the fog edge — hard corners burn in vermilion, gentle in paper
     world.stampRoad(dir > 0 ? 'ドリフト →' : '← ドリフト', 0, -330, {
       jp: true, width: 11, noGhost: true, opacity: 0.6, color: hard ? THEME.shu : THEME.paper,
     });
+    // HUD turn-call + a panned rally note so the corner is unmissable
+    showTurnSignal(dir, hard);
+    audio.cornerAlert(dir, hard);
+  }
+
+  /* ---------- turn-call banner (makes a corner read as LEFT / RIGHT) ---------- */
+  function showTurnSignal(dir, hard) {
+    if (!el.turnSignal) return;
+    const right = dir > 0;
+    el.turnArrow.textContent = right ? '▶' : '◀';
+    el.turnText.textContent = (right ? 'TURN RIGHT' : 'TURN LEFT') + (hard ? ' !!' : '');
+    el.turnSignal.classList.toggle('right', right);
+    el.turnSignal.classList.toggle('left', !right);
+    el.turnSignal.classList.toggle('hard', hard);
+    gsap.killTweensOf(el.turnSignal);
+    // xPercent:-50 keeps GSAP's inline transform centred — animating bare `x`
+    // would overwrite the CSS translateX(-50%) and shove the banner off-centre
+    gsap.fromTo(el.turnSignal,
+      { opacity: 0, xPercent: -50, x: right ? 40 : -40 },
+      { opacity: 1, xPercent: -50, x: 0, duration: 0.4, ease: 'back.out(2)' });
+  }
+  function hideTurnSignal() {
+    if (!el.turnSignal) return;
+    gsap.killTweensOf(el.turnSignal);
+    gsap.to(el.turnSignal, { opacity: 0, duration: 0.35, ease: 'power2.in' });
   }
 
   /* the payout for holding a drift line all the way through a corner */
@@ -981,6 +1073,187 @@
     rollAngle = 0; flipAngle = 0; spinAngle = 0; lastTrickSpin = 0;
     audio.swell();
     if (!RM) fovKick = Math.min(8, fovKick + 3);
+  }
+
+  /* ---------- arsenal: front cannon, supply crates, crash shield ---------- */
+  const aura = world.buildShieldAura();
+  player.group.add(aura);
+
+  for (let i = 0; i < 4; i++) shots.push({ ...world.buildTracer(), live: false, x: 0, z: 0 });
+  for (let i = 0; i < 3; i++) crates.push({ ...world.buildCrate(), live: false, lane: 0, z: 0 });
+
+  function fire() {
+    if (state !== 'run' || paused || helpOpen || airborne || ammo <= 0) return;
+    const s = shots.find((x) => !x.live);
+    if (!s) return;
+    ammo--;
+    syncAmmo();
+    s.live = true;
+    s.x = player.group.position.x;
+    s.z = -3;
+    s.group.visible = true;
+    audio.shoot();
+    if (!RM) fovKick = Math.min(6, fovKick + 0.8);   // recoil breath, not a jolt
+  }
+  function killShot(s) { s.live = false; s.group.visible = false; }
+
+  function spawnCrate() {
+    const cr = crates.find((x) => !x.live);
+    if (!cr) return;
+    const lanes = [0, 1, 2, 3].sort(() => Math.random() - 0.5);
+    for (const lane of lanes) {
+      if (active.some((c) => c.lane === lane && Math.abs(c.z - world.SPAWN_Z) < 90)) continue;
+      if (ramps.some((r) => r.live && r.lane === lane && Math.abs(r.z - world.SPAWN_Z) < 90)) continue;
+      cr.live = true;
+      cr.lane = lane;
+      cr.z = world.SPAWN_Z - 5;
+      cr.group.visible = true;
+      return;
+    }
+  }
+
+  function shatterCrate(x, z) {
+    for (const m of world.crateShards) {
+      if (m.visible) continue;   // let overlapping bursts share what's free
+      m.visible = true;
+      m.position.set(x + (Math.random() - 0.5) * 1.2, 0.8, z);
+      m.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3);
+      shards.push({
+        m,
+        vel: new THREE.Vector3((Math.random() - 0.5) * 9, 3 + Math.random() * 7, (Math.random() - 0.5) * 6),
+        ang: new THREE.Vector3((Math.random() - 0.5) * 12, (Math.random() - 0.5) * 12, (Math.random() - 0.5) * 12),
+        life: 0.9 + Math.random() * 0.4,
+      });
+    }
+  }
+
+  function gainShield() {
+    shieldOn = true;
+    aura.visible = true;
+    syncAmmo();
+    showStamp(1, { jp: 'バリア', word: 'SHIELD ARMED', cls: 't3' }, 0);
+    audio.shieldGain();
+    inkSlap(0.08);
+  }
+
+  function breakCrate(cr) {
+    cr.live = false;
+    cr.group.visible = false;
+    cratesBroken++;
+    const cx = LANE_X[cr.lane] + world.bendX(cr.z);
+    shatterCrate(cx, cr.z);
+    audio.crateBreak();
+    score += CRATE_PTS;
+    // the drop: a shield if you're bare (sometimes), ammo otherwise
+    if (!shieldOn && Math.random() < SHIELD_CHANCE) {
+      gainShield();
+    } else {
+      ammo = Math.min(AMMO_MAX, ammo + AMMO_PER_CRATE);
+      syncAmmo();
+      showStamp(Math.sign(cx - player.group.position.x) || 1,
+        { jp: '弾薬', word: 'AMMO +' + AMMO_PER_CRATE, cls: 't1' }, CRATE_PTS);
+      audio.pickup();
+    }
+  }
+
+  /* a shot clears a car off the road — fewer points than shaving it, but a way out */
+  function blastCar(c) {
+    c.dead = true;
+    carsBlasted++;
+    const pts = BLAST_PTS * combo;
+    score += pts;
+    boostMeter = Math.min(100, boostMeter + 6);
+    const side = Math.sign(c.lx - player.group.position.x) || 1;
+    showStamp(side, { jp: '撃破', word: 'BLASTED', cls: 't2' }, pts);
+    audio.blastHit();
+    inkSlap(0.08);
+    const dir = c.lane <= 1 ? -1 : 1;   // spin out toward the nearest edge
+    gsap.killTweensOf(c);
+    // killing a mid-lane-change tween strands its onComplete — release the lock
+    if (c.changing) { c.changing = false; laneChangerBusy = false; }
+    gsap.to(c, { lx: dir * 15, duration: 0.9, ease: 'power2.in' });
+    gsap.to(c.group.rotation, { y: dir * 2.6, duration: 0.9, ease: 'power1.in' });
+  }
+
+  /* the one-time barrier: eats a crash, spits the car aside */
+  function shieldSave(c) {
+    shieldOn = false;
+    aura.visible = false;
+    syncAmmo();
+    landGrace = SHIELD_GRACE;
+    c.dead = true;
+    const side = Math.sign(c.lx - player.group.position.x) || 1;
+    const dir = c.lane <= 1 ? -1 : 1;
+    gsap.killTweensOf(c);
+    if (c.changing) { c.changing = false; laneChangerBusy = false; }
+    gsap.to(c, { lx: dir * 15, duration: 0.8, ease: 'power2.in' });
+    gsap.to(c.group.rotation, { y: dir * 3, duration: 0.8, ease: 'power1.in' });
+    showStamp(side, { jp: 'バリア', word: 'SHIELD SAVED', cls: 't3' }, 0);
+    world.stampRoad('バリア', player.group.position.x, 2.5, { jp: true, width: 5 });
+    audio.shieldSave();
+    inkSlap(0.16);
+    if (!RM) fovKick = Math.min(9, fovKick + 4);
+  }
+
+  function updateShots(dt) {
+    for (const s of shots) {
+      if (!s.live) continue;
+      // swept test: the bolt covers [s.z, zPrev] this frame — anything inside
+      // that segment is hit, so fast bolts can't tunnel through a thin target
+      const zPrev = s.z;
+      s.z -= TRACER_SPEED * dt;
+      s.group.position.set(s.x + world.bendX(s.z), 0, s.z);
+      if (s.z < -280) { killShot(s); continue; }
+      if (state !== 'run') continue;   // frozen states: fly, but hit nothing
+      let spent = false;
+      for (const cr of crates) {
+        if (cr.live && cr.z > s.z - 2 && cr.z < zPrev + 2 &&
+            Math.abs(s.x - LANE_X[cr.lane]) < 1.5) {
+          breakCrate(cr);
+          killShot(s);
+          spent = true;
+          break;
+        }
+      }
+      if (spent) continue;
+      for (const c of active) {
+        if (!c.dead && c.z > s.z - c.halfL && c.z < zPrev + c.halfL &&
+            Math.abs(s.x - c.lx) < c.halfW + 0.5) {
+          blastCar(c);
+          killShot(s);
+          break;
+        }
+      }
+    }
+  }
+
+  function updateCrates(dt) {
+    for (const cr of crates) {
+      if (!cr.live) continue;
+      cr.z += speed * dt;
+      cr.group.position.set(LANE_X[cr.lane] + world.bendX(cr.z), 0, cr.z);
+      cr.box.rotation.y += dt * 1.1;   // idle spin so it reads as a pickup
+      if (cr.z > world.KILL_Z) { cr.live = false; cr.group.visible = false; continue; }
+      if (state === 'run' && !airborne &&
+          Math.abs(player.group.position.x - LANE_X[cr.lane]) < 1.6 && Math.abs(cr.z) < 1.8) {
+        breakCrate(cr);
+      }
+    }
+    // shard debris: gravity + world scroll, then gone
+    for (let i = shards.length - 1; i >= 0; i--) {
+      const sh = shards[i];
+      sh.vel.y -= 22 * dt;
+      sh.m.position.x += sh.vel.x * dt;
+      sh.m.position.y = Math.max(0.12, sh.m.position.y + sh.vel.y * dt);
+      sh.m.position.z += sh.vel.z * dt + speed * dt;
+      sh.m.rotation.x += sh.ang.x * dt;
+      sh.m.rotation.y += sh.ang.y * dt;
+      sh.life -= dt;
+      if (sh.life <= 0 || sh.m.position.z > world.KILL_Z) {
+        sh.m.visible = false;
+        shards.splice(i, 1);
+      }
+    }
   }
 
   const wrapAng = (a) => { a %= (Math.PI * 2); if (a > Math.PI) a -= Math.PI * 2; if (a < -Math.PI) a += Math.PI * 2; return a; };
@@ -1074,11 +1347,15 @@
     if (e.repeat) { if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' '].includes(e.key)) e.preventDefault(); return; }
     audio.resume();
     keyState[e.code] = true;
+    // how-to-play: '?' toggles, Escape closes — handled before gameplay keys
+    if (e.key === '?' || (e.code === 'Slash' && e.shiftKey)) { toggleHelp(); e.preventDefault(); return; }
+    if (helpOpen) { if (e.code === 'Escape') closeHelp(); return; }
     switch (e.code) {
       case 'ArrowLeft': case 'KeyA': steerL = true; e.preventDefault(); break;
       case 'ArrowRight': case 'KeyD': steerR = true; e.preventDefault(); break;
       case 'ArrowUp': case 'KeyW': wantBoost = true; e.preventDefault(); break;
       case 'ShiftLeft': case 'ShiftRight': case 'Space': driftHeld = true; e.preventDefault(); break;
+      case 'KeyF': fire(); break;
       case 'KeyM': toggleMute(); break;
       case 'KeyP': togglePause(); break;
       case 'KeyR':
@@ -1101,39 +1378,36 @@
     if (state === 'intro') holdEnd();
   });
 
-  /* touch: hold to start, then left/right halves steer */
-  let touchSteer = 0;
-  function touchXToSteer(t) {
-    touchSteer = (t.clientX < window.innerWidth / 2) ? -1 : 1;
-  }
+  /* touch: on-screen buttons steer & drift (wired below). A bare-screen touch
+     only drives the intro hold-to-start ritual and unlocks the audio context —
+     the old "screen-half steer / two-finger drift" scheme was the thing mobile
+     players couldn't work out, so it's replaced by explicit buttons. */
+  let touchSteer = 0;   // retained only for the `|| touchSteer` fallback in updatePlayer
   const onButton = (e) => !!(e.target && e.target.closest && e.target.closest('button'));
   window.addEventListener('touchstart', (e) => {
-    if (onButton(e)) return;
-    e.preventDefault();
+    if (onButton(e)) return;               // control buttons handle their own touches
     audio.resume();
-    if (state === 'intro') { holdStart(); return; }
-    if (state === 'results') return;
-    touchXToSteer(e.touches[0]);
-    driftHeld = e.touches.length >= 2;   // second finger = drift
+    if (state === 'intro') { e.preventDefault(); holdStart(); }
   }, { passive: false });
-  window.addEventListener('touchmove', (e) => {
-    if (state === 'run' || state === 'starting') {
-      e.preventDefault();
-      touchXToSteer(e.touches[0]);
-      driftHeld = e.touches.length >= 2;
-    }
-  }, { passive: false });
-  window.addEventListener('touchend', (e) => {
-    if (state === 'intro') holdEnd();
-    if (e.touches.length === 0) touchSteer = 0;
-    else touchXToSteer(e.touches[0]);
-    driftHeld = e.touches.length >= 2;
-  });
-  window.addEventListener('touchcancel', () => {
-    touchSteer = 0;
-    driftHeld = false;
-    if (state === 'intro') holdEnd();
-  });
+  window.addEventListener('touchend', () => { if (state === 'intro') holdEnd(); });
+  window.addEventListener('touchcancel', () => { if (state === 'intro') holdEnd(); });
+
+  /* on-screen control pad: press = hold, release = let go. In the air the same
+     three buttons become trick controls (roll / spin), exactly like the keys. */
+  function bindHold(id, on, off) {
+    const b = document.getElementById(id);
+    if (!b) return;
+    const press = (e) => { e.preventDefault(); audio.resume(); on(); };
+    const release = (e) => { if (e && e.cancelable) e.preventDefault(); off(); };
+    b.addEventListener('pointerdown', press);
+    b.addEventListener('pointerup', release);
+    b.addEventListener('pointerleave', release);
+    b.addEventListener('pointercancel', release);
+  }
+  bindHold('btn-left',  () => { steerL = true; },   () => { steerL = false; });
+  bindHold('btn-right', () => { steerR = true; },   () => { steerR = false; });
+  bindHold('btn-drift', () => { driftHeld = true; }, () => { driftHeld = false; });
+  bindHold('btn-fire',  () => { fire(); },           () => {});   // tap = one shot
 
   /* on-screen boost trigger (coarse pointers) */
   const boostOn = (e) => { e.preventDefault(); audio.resume(); wantBoost = true; };
@@ -1165,8 +1439,9 @@
   syncMuteBtn();
   el.muteBtn.addEventListener('click', () => { audio.init(); audio.resume(); toggleMute(); });
 
-  /* music toggle (independent of SFX) */
-  let musicOn = store.get('hiyari-music') !== '0';
+  /* music toggle (independent of SFX). Default OFF — the user wants racing
+     SOUND EFFECTS, not a soundtrack; the button brings the beat back on demand. */
+  let musicOn = store.get('hiyari-music') === '1';
   audio._musicPref = musicOn;
   function syncMusicBtn() {
     el.musicBtn.textContent = musicOn ? 'MUSIC ON' : 'MUSIC OFF';
@@ -1182,6 +1457,32 @@
     syncMusicBtn();
     audio.uiBlip();
   });
+
+  /* how-to-play overlay — freezes the drive (helpOpen gate in frame()) so a
+     player can read the controls without the car ploughing on without them */
+  const helpEl = document.getElementById('help');
+  function openHelp() {
+    if (helpOpen) return;
+    helpOpen = true;
+    clearInputs();
+    // freeze GSAP too — otherwise tweens and delayedCalls (e.g. crash → results)
+    // keep firing on GSAP's own ticker behind the overlay. Skip if already paused.
+    if (!paused) gsap.globalTimeline.pause();
+    if (helpEl) helpEl.setAttribute('aria-hidden', 'false');
+    audio.init(); audio.resume(); audio.duck(true); audio.uiBlip();
+  }
+  function closeHelp() {
+    if (!helpOpen) return;
+    helpOpen = false;
+    if (!paused) gsap.globalTimeline.resume();
+    if (helpEl) helpEl.setAttribute('aria-hidden', 'true');
+    audio.duck(paused);
+    last = performance.now();   // don't fold the frozen span into the next dt
+  }
+  function toggleHelp() { helpOpen ? closeHelp() : openHelp(); }
+  document.getElementById('help-btn').addEventListener('click', () => { audio.init(); openHelp(); });
+  document.getElementById('help-close').addEventListener('click', closeHelp);
+  if (helpEl) helpEl.addEventListener('pointerdown', (e) => { if (e.target === helpEl) closeHelp(); });
 
   /* pause — gameplay GSAP tweens (lane changes, blinkers) freeze with it */
   function togglePause() {
@@ -1255,12 +1556,20 @@
     }
     if (overdrive) overdriveTime += dt;
 
-    // slingshot burst decays over its window
+    // slingshot burst decays over its window — eased (f·(2−f) holds the peak
+    // early, tapers late) so the burst melts away instead of sagging
     if (slingTimer > 0) slingTimer = Math.max(0, slingTimer - dt);
-    const slingMult = slingTimer > 0 ? 1 + (SLING_MULT - 1) * (slingTimer / SLING_TIME) : 1;
+    const sf = slingTimer / SLING_TIME;
+    const slingMult = slingTimer > 0 ? 1 + (SLING_MULT - 1) * sf * (2 - sf) : 1;
 
-    speed = baseSpeed * (fever ? 1.12 : 1) * (boosting ? 1.42 : 1) *
+    // the speed the systems ASK for…
+    const speedTarget = baseSpeed * (fever ? 1.12 : 1) * (boosting ? 1.42 : 1) *
             (1 + 0.05 * draftCharge) * slingMult * (overdrive ? OD_SPEED : 1);
+    // …and the speed the car actually DOES. Asymmetric chase: surges arrive
+    // fast (feels responsive) but decay is slow (never the sudden "why am I
+    // slowing down" jolt after a pass — the user's exact complaint).
+    const chase = speedTarget > speed ? 5.5 : 1.6;
+    speed += (speedTarget - speed) * (1 - Math.exp(-chase * dt));
     speedNorm = Math.max(0, Math.min(1, (speed - V0) / (VMAX - V0)));
     topSpeed = Math.max(topSpeed, speed * KMH);
 
@@ -1276,6 +1585,8 @@
     }
     rampTimer -= dt;
     if (rampTimer <= 0) { spawnRamp(); rampTimer = 24 + Math.random() * 16; }
+    crateTimer -= dt;
+    if (crateTimer <= 0) { spawnCrate(); crateTimer = 10 + Math.random() * 8; }
 
     // tier ladder
     for (let i = TIER_AT.length - 1; i > tier; i--) {
@@ -1319,6 +1630,8 @@
         el.speedLines.style.opacity = speedNorm > 0.30 ? (inten * 0.5).toFixed(3) : '0';
         el.speedLines.style.transform = 'scale(' + (1 + inten * 0.14).toFixed(3) + ')';
       }
+      // night vignette deepens with speed — frames the road, smooths the edges
+      el.vignette.style.opacity = (0.16 + speedNorm * 0.36).toFixed(3);
     }
 
     audio.setDrive(speedNorm, vx / STEER_VMAX, tier, boosting ? 1 : 0);
@@ -1332,6 +1645,8 @@
     // drift: rear steps out, lateral authority jumps, the road gets inked (ground only)
     drifting = driftHeld && state === 'run' && !airborne &&
       (steer !== 0 || Math.abs(vx) > 5);
+    if (drifting && !wasDrifting) audio.tyreChirp();   // the bark as rubber lets go
+    wasDrifting = drifting;
     // drifting INTO a live corner is the cornering skill — grip + apex ink
     apexDrift = drifting && Math.abs(curveK.v) > CORNER_MIN && steerSign === Math.sign(curveK.v);
 
@@ -1377,11 +1692,15 @@
       player.group.rotation.x += (0 - player.group.rotation.x) * (1 - Math.exp(-8 * dt));
       p.y = Math.sin(clockT * 52) * 0.004 * (0.4 + speedNorm);
 
-      // body language: yaw exaggerates in a slide AND points the nose into the corner
-      let yaw = -vx * (drifting ? 0.034 : 0.012) - curveK.v * PLYR_YAW_K;
-      yaw = Math.max(-0.58, Math.min(0.58, yaw));
-      player.group.rotation.y += (yaw - player.group.rotation.y) * (1 - Math.exp(-9 * dt));
-      const bank = -vx * 0.021;
+      // body language: in a slide the tail steps out and the nose COUNTER-STEERS
+      // (points into the flick, opposite the way the car is sliding) — the classic
+      // drift pose — while a corner points the whole car into the bend.
+      let yaw = -vx * (drifting ? 0.052 : 0.012) - curveK.v * PLYR_YAW_K;
+      if (drifting) yaw += steerSign * 0.22;   // counter-steer flick: nose leads the drift
+      yaw = Math.max(-0.68, Math.min(0.68, yaw));
+      const yawEase = drifting ? 12 : 9;       // the slide breaks fast, settles slow
+      player.group.rotation.y += (yaw - player.group.rotation.y) * (1 - Math.exp(-yawEase * dt));
+      const bank = -vx * (drifting ? 0.03 : 0.021);
       player.group.rotation.z += (bank - player.group.rotation.z) * (1 - Math.exp(-9 * dt));
     }
 
@@ -1404,6 +1723,13 @@
       audio.setDrift(0);
     }
 
+    // the armed shield breathes around the car
+    if (shieldOn) {
+      aura.rotation.y += dt * 1.6;
+      const as = 1 + Math.sin(clockT * 5) * 0.05;
+      aura.scale.set(as, 1, as);
+    }
+
     // apex ink accrues while you hold the drift through a corner
     if (apexDrift) {
       cornerApex += speed * dt * (Math.abs(curveK.v) / 1e-4) * APEX_K;
@@ -1423,6 +1749,12 @@
       c.z += (speed - c.speed) * dt;
       c.group.position.z = c.z;
       c.group.position.x = c.lx + world.bendX(c.z);
+
+      // blasted / shield-shoved cars are ghosts: they spin off and interact with nothing
+      if (c.dead) {
+        if (c.z > world.KILL_Z) { releaseCar(c); active.splice(i, 1); }
+        continue;
+      }
 
       tryLaneChange(c, dt);
 
@@ -1464,9 +1796,11 @@
         }
       }
 
-      // collision (0.88/0.86 forgiveness; airborne cars fly clean over traffic)
+      // collision (0.88/0.86 forgiveness; airborne cars fly clean over traffic).
+      // An armed shield eats the crash once and shoves the car off the road.
       if (state === 'run' && !airborne && landGrace <= 0 &&
           dx < halfWsum * 0.88 && dz < halfLsum * 0.86) {
+        if (shieldOn) { shieldSave(c); continue; }
         crash(c);
         return;
       }
@@ -1572,7 +1906,10 @@
     requestAnimationFrame(frame);
     const raw = Math.min((nowMs - last) / 1000, 1 / 30);
     last = nowMs;
-    if (paused) { renderer.render(scene, camera); return; }
+    // touch controls only exist while actually driving — hides them under the
+    // intro/crash/results screens (which don't full-screen-cover on wide tablets)
+    document.body.classList.toggle('playing', state === 'run' || state === 'starting');
+    if (paused || helpOpen) { renderer.render(scene, camera); return; }
 
     const dt = raw * ts.v;
     clockT += raw;
@@ -1585,6 +1922,8 @@
       updatePlayer(dt, raw);
       updateTraffic(dt);
       updateRamps(dt);
+      updateShots(dt);
+      updateCrates(dt);
     } else if (state === 'starting') {
       updatePlayer(dt, raw);
       for (const c of active) {
@@ -1598,6 +1937,8 @@
         c.z += (speed - c.speed) * dt;
         c.group.position.z = c.z;
       }
+      updateShots(dt);    // both guard their run-only interactions internally —
+      updateCrates(dt);   // props keep scrolling instead of freezing mid-road
     }
 
     if (state !== 'boot' && state !== 'intro') {
@@ -1606,6 +1947,7 @@
     }
 
     updateAmbient(raw);
+    world.twinkle(clockT);
     updateCamera(raw);
     renderer.render(scene, camera);
   }
@@ -1620,7 +1962,7 @@
     state = 'intro';
     gsap.set(el.results, { y: 0, yPercent: 102 });   // clear the parsed CSS px offset
     if (window.matchMedia && matchMedia('(pointer: coarse)').matches) {
-      $('#start-keys').textContent = 'hold — drive · 2 fingers — drift · 加速 — boost · in air: tap side roll / 加速 flip / 2-finger spin';
+      $('#start-keys').textContent = 'hold to drive · then use the ◀ ▶ · DRIFT · 加速 buttons · tap HOW TO PLAY';
     }
     // paint everything that needs type (fonts are ready now)
     player.paintLivery(1, false);
@@ -1682,6 +2024,11 @@
       wipeoutTimer: Math.round(wipeoutTimer * 100) / 100,
       trick: { roll: rollAngle, flip: flipAngle, spin: spinAngle },
       bestTrick,
+      ammo,
+      shieldOn,
+      cratesBroken,
+      carsBlasted,
+      crates: crates.filter((c) => c.live).map((c) => ({ lane: c.lane, z: Math.round(c.z) })),
       cars: active.map((c) => ({
         x: Math.round(c.group.position.x * 100) / 100,
         z: Math.round(c.z * 10) / 10,
