@@ -115,6 +115,70 @@
     W.paintMoon = paintMoon;
     W.bandMat = bandMat;
 
+    /* ---------- meme sky: friends' portraits drift across as an easter egg ----
+       sources are inlined as base64 in the built file (window.HIYARI_MEME_SRCS)
+       and fall back to the meme_image/ folder when running the dev index.html. */
+    const MEME_SRCS = (typeof window !== 'undefined' && window.HIYARI_MEME_SRCS) ||
+      ['meme_image/kmh.png', 'meme_image/wla.jpeg'];
+    const memeLoader = new THREE.TextureLoader();
+    const memes = [];
+    // WebGL refuses to texture a file:// image (opaque origin → tainted), which
+    // would throw at render time. The dist inlines them as data: URIs (always
+    // safe); a raw folder path is only safe when served over http. So skip the
+    // rest — the game just runs without the sky memes on a bare file:// dev open.
+    for (let i = 0; i < MEME_SRCS.length; i++) {
+      const src = MEME_SRCS[i];
+      const safe = src.indexOf('data:') === 0 ||
+        (typeof location === 'undefined' || location.protocol !== 'file:');
+      if (!safe) continue;
+      const mat = new THREE.SpriteMaterial({ fog: false, depthWrite: false, transparent: true, opacity: 0 });
+      const spr = new THREE.Sprite(mat);
+      spr.renderOrder = -1;
+      spr.visible = false;
+      scene.add(spr);
+      const m = { spr, mat, phase: 'wait', t: 3 + i * 6, baseX: 0, baseY: 70, ar: 0.72 };
+      memeLoader.load(
+        src,
+        (tex) => {
+          if (THREE.SRGBColorSpace) tex.colorSpace = THREE.SRGBColorSpace;
+          mat.map = tex; mat.needsUpdate = true;
+          if (tex.image && tex.image.height) m.ar = tex.image.width / tex.image.height;
+        },
+        undefined,
+        () => { m.phase = 'dead'; spr.visible = false; }   // missing file → stay hidden
+      );
+      memes.push(m);
+    }
+    // fade a portrait up somewhere in the sky, hold, fade out, then wait — a loop
+    W.updateMemes = function (dt, t) {
+      for (const m of memes) {
+        m.t -= dt;
+        if (m.phase === 'wait') {
+          if (m.t <= 0) {
+            m.baseX = -170 + Math.random() * 340;
+            m.baseY = 62 + Math.random() * 54;
+            const h = 50 + Math.random() * 20;      // bigger, taller portraits
+            m.spr.scale.set(h * m.ar, h, 1);
+            m.spr.position.set(m.baseX, m.baseY, -333);
+            m.spr.visible = true;
+            m.phase = 'in'; m.t = 0.9;
+          }
+        } else if (m.phase === 'in') {
+          m.mat.opacity = Math.min(0.9, m.mat.opacity + dt / 0.9);
+          if (m.t <= 0) { m.phase = 'hold'; m.t = 4 + Math.random() * 3.5; m.mat.opacity = 0.9; }
+        } else if (m.phase === 'hold') {
+          if (m.t <= 0) { m.phase = 'out'; m.t = 0.9; }
+        } else if (m.phase === 'out') {
+          m.mat.opacity = Math.max(0, m.mat.opacity - dt / 0.9);
+          if (m.t <= 0) { m.phase = 'wait'; m.t = 8 + Math.random() * 11; m.spr.visible = false; m.mat.opacity = 0; }
+        }
+        if (m.spr.visible) {
+          m.spr.position.x = m.baseX + Math.sin(t * 0.4 + m.baseY) * 3.5;
+          m.spr.position.y = m.baseY + Math.sin(t * 0.7) * 1.8;
+        }
+      }
+    };
+
     /* ---------- starfield: two clouds twinkling out of phase ----------
        Screen-space point sizes (no attenuation) so they stay pin-sharp;
        fog:false keeps them burning through the horizon haze. */
@@ -172,12 +236,15 @@
     const dashGeo = new THREE.PlaneGeometry(0.28, DASH_LEN);
     dashGeo.rotateX(-Math.PI / 2);
     const nRows = 62;
-    const dashes = new THREE.InstancedMesh(dashGeo, paintPaper, nRows * 3);
+    // dash lanes: 3 down the near carriageway + 1 down the far carriageway
+    // (between the two oncoming lanes) so the far road reads as drivable
+    const DASH_X = [-4.5, 0, 4.5, -17.15];
+    const dashes = new THREE.InstancedMesh(dashGeo, paintPaper, nRows * DASH_X.length);
     const dummy = new THREE.Object3D();
     const dashData = [];
     let di = 0;
     for (let r = 0; r < nRows; r++) {
-      for (const x of [-4.5, 0, 4.5]) {
+      for (const x of DASH_X) {
         dummy.position.set(x, 0.02, 30 - r * DASH_CYCLE);
         dummy.updateMatrix();
         dashes.setMatrixAt(di++, dummy.matrix);
@@ -241,7 +308,8 @@
     segLine(9.1, 0.34, paintPaper);
     segLine(-9.1, 0.34, paintPaper);
     segLine(-9.85, 0.3, paintYellow);
-    segLine(-12.4, 0.3, paintYellow);   // oncoming side edge
+    segLine(-12.4, 0.3, paintYellow);   // centre divider (far edge of it)
+    segLine(-21.7, 0.34, paintPaper);   // far carriageway outer edge — closes the road
 
     /* sound barriers, both sides */
     const barrierTex = canvasTexture(makeCanvas(64, 8, (ctx, w, h) => {
@@ -269,12 +337,26 @@
       m.position.set(9.9, 0.25, 0);
       return m;
     }, null, true);
-    // low jersey median — oncoming headlights stay visible over it
-    const medianMat = new THREE.MeshLambertMaterial({ color: 0x53565c });
-    const medianGeo = new THREE.BoxGeometry(0.55, 1.0, 60.5);
+    // flat centre median — the raised jersey barrier is gone so the divider is
+    // a crossable double-yellow: this is now a TWO-WAY road you can cut into the
+    // oncoming carriageway on. A hatched "keep-clear" strip still reads the split.
+    const medianTex = canvasTexture(makeCanvas(32, 128, (ctx, w, h) => {
+      ctx.fillStyle = 'rgba(0,0,0,0)';
+      ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = css(THEME.yellow);
+      ctx.lineWidth = 4;
+      for (let y = -h; y < h; y += 14) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y + w); ctx.stroke();
+      }
+    }), maxAniso);
+    medianTex.wrapS = medianTex.wrapT = THREE.RepeatWrapping;
+    medianTex.repeat.set(1, 30);
+    const medianMat = new THREE.MeshLambertMaterial({ map: medianTex, transparent: true, opacity: 0.5 });
+    const medianGeo = new THREE.PlaneGeometry(2.2, 61);
+    medianGeo.rotateX(-Math.PI / 2);
     conveyor(10, 60, () => {
       const m = new THREE.Mesh(medianGeo, medianMat);
-      m.position.set(-11.2, 0.5, 0);
+      m.position.set(-11.2, 0.02, 0);
       return m;
     }, null, true);
 
@@ -735,12 +817,81 @@
       return t;
     };
 
-    /* ---------- player: the kei-racer wedge ---------- */
-    function buildPlayer() {
-      const g = new THREE.Group();
-      const L = 4.4, HW = 1.02;
+    /* ---------- player: three switchable rides (car → bike → bicycle) ----------
+       All three live inside one player.group; only the active one is visible.
+       Each returns { root, meshes, paint(combo,fever), halfW, halfL, name }.
+       `meshes` is the flat list the crash scatters and setVehicle toggles. */
 
-      // fastback side profile, extruded across the width
+    /* a limb / strut spanning two points in the bike's y–z plane. `axis` says
+       which local axis of the box/cylinder runs along the segment ('z' for the
+       box limbs, 'y' for cylinder tubes) so the piece points the right way.
+       Everything is added straight to `root` (identity in player space) so the
+       crash-scatter's cached home transforms stay valid. */
+    function spanMesh(y1, z1, y2, z2, thick, mat, x, axis) {
+      const dy = y2 - y1, dz = z2 - z1, len = Math.hypot(dy, dz) || 0.01;
+      const geo = axis === 'y'
+        ? new THREE.CylinderGeometry(thick, thick, len, 8)
+        : new THREE.BoxGeometry(thick, thick, len);
+      const m = new THREE.Mesh(geo, mat);
+      m.position.set(x || 0, (y1 + y2) / 2, (z1 + z2) / 2);
+      // cylinder long axis is +y → φ=atan2(dz,dy); box long axis is +z → φ=atan2(-dy,dz)
+      m.rotation.x = axis === 'y' ? Math.atan2(dz, dy) : Math.atan2(-dy, dz);
+      return m;
+    }
+
+    // a dark ink rider: helmet + leaning torso + arms to the bars + legs to the
+    // pegs/pedals. lean is the forward tip (rad); pass foot* to draw the legs.
+    function addRider(root, o) {
+      // a pale racing suit (never black — it vanished against the road)
+      const suit = new THREE.MeshLambertMaterial({ color: o.suit || THEME.paper });
+      const helmet = new THREE.MeshLambertMaterial({ color: o.helmet });
+      const a = o.lean, cos = Math.cos(a), sin = Math.sin(a);
+      const up = (d) => [o.hipY + d * cos, o.hipZ - d * sin];   // d up the leaning spine
+      const TH = 0.62;
+      const [ty, tz] = up(TH / 2);
+      const torso = new THREE.Mesh(new THREE.BoxGeometry(0.42, TH, 0.30), suit);
+      torso.position.set(0, ty, tz); torso.rotation.x = -a;
+      const [hy, hz] = up(TH + 0.16);
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.19, 14, 12), helmet);
+      head.position.set(0, hy, hz);
+      const visor = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.11, 0.06), glassMat);
+      visor.position.set(0, hy - 0.01, hz - 0.16);
+      root.add(torso, head, visor);
+      // arms: shoulders → bars
+      const [sy, sz] = up(TH * 0.82);
+      root.add(spanMesh(sy, sz, o.barY, o.barZ, 0.12, suit, 0.16, 'z'));
+      root.add(spanMesh(sy, sz, o.barY, o.barZ, 0.12, suit, -0.16, 'z'));
+      // legs: hips → pedals/pegs
+      if (o.footY != null) {
+        root.add(spanMesh(o.hipY, o.hipZ, o.footY, o.footZ, 0.15, suit, 0.14, 'z'));
+        root.add(spanMesh(o.hipY, o.hipZ, o.footY, o.footZ, 0.15, suit, -0.14, 'z'));
+      }
+    }
+
+    // a bicycle/motorbike spoked wheel: an open rim ring + hub + a few spokes,
+    // built in the y–z plane (rolls along z). returns nothing, adds to root.
+    function addSpokedWheel(root, cz, R, tube, rimMat, spokeMat) {
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(R, tube, 8, 24), rimMat);
+      rim.rotation.y = Math.PI / 2;                    // face sideways
+      rim.position.set(0, R, cz);
+      root.add(rim);
+      const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.14, 8), rimMat);
+      hub.rotation.z = Math.PI / 2;
+      hub.position.set(0, R, cz);
+      root.add(hub);
+      for (let k = 0; k < 4; k++) {
+        const ang = k * Math.PI / 4 + 0.2;
+        const sp = new THREE.Mesh(new THREE.BoxGeometry(0.02, R * 2 - tube, 0.02), spokeMat);
+        sp.position.set(0, R, cz);
+        sp.rotation.x = ang;
+        root.add(sp);
+      }
+    }
+
+    // ===================== 0 · the kei-racer car =====================
+    function buildCar() {
+      const root = new THREE.Group();
+      const L = 4.4, HW = 1.02;
       const s = new THREE.Shape();
       s.moveTo(-2.2, 0.16);
       s.lineTo(-2.2, 0.98);          // kamm tail, chopped clean
@@ -753,9 +904,7 @@
       s.closePath();
       const bodyGeo = new THREE.ExtrudeGeometry(s, { depth: HW * 2, bevelEnabled: false });
       bodyGeo.translate(0, 0, -HW);
-      bodyGeo.rotateY(Math.PI / 2);   // extrude axis → X, profile length → Z (nose at -Z)
-
-      // planar top-projection UVs so a canvas livery wraps hood → roof → tail
+      bodyGeo.rotateY(Math.PI / 2);
       const pos = bodyGeo.attributes.position;
       const uv = bodyGeo.attributes.uv;
       for (let i = 0; i < pos.count; i++) {
@@ -765,25 +914,19 @@
 
       const liveryCanvas = makeCanvas(256, 512, () => {});
       const liveryTex = canvasTexture(liveryCanvas, maxAniso);
-      const bodyMat = new THREE.MeshLambertMaterial({ map: liveryTex });
-      const body = new THREE.Mesh(bodyGeo, bodyMat);
-      g.add(body);
+      const body = new THREE.Mesh(bodyGeo, new THREE.MeshLambertMaterial({ map: liveryTex }));
+      root.add(body);
 
-      // cabin glass sits inside the rear-set fastback greenhouse
       const glass = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.26, 1.0), glassMat);
       glass.position.set(0, 0.84, 0.55);
-      g.add(glass);
-
-      addWheels(g, 2.2, 4.4, 0.42);
-
-      const tail = tailBar(g, 1.9, 0.86, 2.19);
-
-      // headlights + shared light pool ahead of the nose
+      root.add(glass);
+      addWheels(root, 2.2, 4.4, 0.42);
+      tailBar(root, 1.9, 0.86, 2.19);
       const hlMat = new THREE.MeshBasicMaterial({ color: 0xFFF2D0 });
       for (const x of [-0.7, 0.7]) {
         const hl = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.12, 0.06), hlMat);
         hl.position.set(x, 0.42, -2.21);
-        g.add(hl);
+        root.add(hl);
       }
       const beam = new THREE.Mesh(
         new THREE.PlaneGeometry(4.4, 10),
@@ -792,24 +935,21 @@
       beam.rotation.x = -Math.PI / 2;
       beam.position.set(0, 0.04, -7.4);
       beam.renderOrder = 3;
-      g.add(beam);
+      root.add(beam);
 
-      /* the livery is alive: roundel prints the current combo */
-      function paintLivery(combo, fever) {
+      function paint(combo, fever) {
         const ctx = liveryCanvas.getContext('2d');
         const bodyC = fever ? css(THEME.shu) : css(THEME.paper);
         const s1 = fever ? css(THEME.paper) : css(THEME.shu);
         const s2 = fever ? css(THEME.paper) : css(THEME.blue);
         ctx.fillStyle = bodyC;
         ctx.fillRect(0, 0, 256, 512);
-        // martini-discipline double stripe, offset left of center
         ctx.fillStyle = s1;
         ctx.fillRect(78, 0, 34, 512);
         ctx.fillStyle = css(THEME.ink);
         ctx.fillRect(114, 0, 5, 512);
         ctx.fillStyle = s2;
         ctx.fillRect(121, 0, 22, 512);
-        // race-number roundel on the hood (nose = canvas bottom after flipY)
         ctx.save();
         ctx.translate(178, 428);
         ctx.fillStyle = fever ? css(THEME.paper) : css(THEME.ink);
@@ -822,18 +962,180 @@
         ctx.restore();
         liveryTex.needsUpdate = true;
       }
-      paintLivery(1, false);
+      return { root, paint, halfW: HW, halfL: L / 2, name: 'CAR' };
+    }
 
-      // pieces that scatter on the crash (cached local transforms)
-      const pieces = [];
-      g.traverse((o) => {
-        if (o.isMesh || o.isSprite) {
-          pieces.push({ obj: o, pos: o.position.clone(), rot: o.rotation.clone() });
-        }
-      });
+    // ===================== 1 · the sport motorbike =====================
+    function buildBike() {
+      const root = new THREE.Group();
+      const HW = 0.5, L = 2.7;
+      const bodyMat = new THREE.MeshLambertMaterial({ color: THEME.paper });
+      const accentMat = new THREE.MeshLambertMaterial({ color: THEME.shu });
+      const darkMat = new THREE.MeshLambertMaterial({ color: THEME.ink });
+      const metalMat = new THREE.MeshLambertMaterial({ color: 0x2b2f35 });
 
+      // fat tyres (solid discs) with a bright rim ring on top
+      const tyreGeo = new THREE.CylinderGeometry(0.5, 0.5, 0.24, 20);
+      tyreGeo.rotateZ(Math.PI / 2);
+      for (const z of [-1.08, 1.08]) {
+        const wh = new THREE.Mesh(tyreGeo, wheelMat);
+        wh.position.set(0, 0.5, z);
+        const rim = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.05, 6, 18), metalMat);
+        rim.rotation.y = Math.PI / 2; rim.position.set(0, 0.5, z);
+        root.add(wh, rim);
+      }
+      // raked front fork + tele legs to the wheel
+      root.add(spanMesh(1.12, -0.62, 0.5, -1.08, 0.06, metalMat, 0.14, 'y'));
+      root.add(spanMesh(1.12, -0.62, 0.5, -1.08, 0.06, metalMat, -0.14, 'y'));
+      // swingarm to the rear wheel
+      root.add(spanMesh(0.55, 0.15, 0.5, 1.08, 0.07, metalMat, 0.12, 'y'));
+      root.add(spanMesh(0.55, 0.15, 0.5, 1.08, 0.07, metalMat, -0.12, 'y'));
+
+      // engine block, low and central
+      const engine = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.66), darkMat);
+      engine.position.set(0, 0.6, 0.02);
+      root.add(engine);
+      // fuel tank, sloping down toward the front
+      const tank = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.4, 0.95), bodyMat);
+      tank.position.set(0, 1.02, 0.18); tank.rotation.x = -0.16;
+      // front fairing + a raked screen
+      const fairing = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.62, 0.6), bodyMat);
+      fairing.position.set(0, 0.86, -0.78); fairing.rotation.x = -0.42;
+      const screen = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.3, 0.05), glassMat);
+      screen.position.set(0, 1.2, -0.72); screen.rotation.x = -0.55;
+      // tail cowl, kicked up at the rear
+      const tailCowl = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.3, 0.8), accentMat);
+      tailCowl.position.set(0, 1.14, 0.95); tailCowl.rotation.x = 0.28;
+      const seat = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.16, 0.72), darkMat);
+      seat.position.set(0, 1.0, 0.62);
+      root.add(tank, fairing, screen, tailCowl, seat);
+      // clip-on handlebars
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(0.74, 0.07, 0.07), darkMat);
+      bar.position.set(0, 1.12, -0.5);
+      root.add(bar);
+      // chromed exhaust down the right side
+      const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.09, 1.3, 10), metalMat);
+      pipe.rotation.x = Math.PI / 2 + 0.05; pipe.position.set(0.3, 0.5, 0.55);
+      root.add(pipe);
+      // headlight + tail lamp
+      const hl = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.2, 0.06), new THREE.MeshBasicMaterial({ color: 0xFFF2D0 }));
+      hl.position.set(0, 0.9, -1.05);
+      root.add(hl);
+      tailBar(root, 0.42, 1.05, 1.28);
+
+      addRider(root, { hipY: 1.02, hipZ: 0.58, lean: 0.62, helmet: THEME.shu, barY: 1.12, barZ: -0.5, footY: 0.6, footZ: 0.12 });
+
+      const bodyMats = [tank.material, fairing.material];
+      function paint(_combo, fever) {
+        const c = new THREE.Color(fever ? THEME.shu : THEME.paper);
+        for (const m of bodyMats) m.color.copy(c);
+        accentMat.color.set(fever ? THEME.paper : THEME.shu);
+      }
+      return { root, paint, halfW: HW, halfL: L / 2, name: 'BIKE' };
+    }
+
+    // ===================== 2 · the bicycle =====================
+    function buildBicycle() {
+      const root = new THREE.Group();
+      const HW = 0.4, L = 2.1;
+      const frameMat = new THREE.MeshLambertMaterial({ color: THEME.shu });
+      const darkMat = new THREE.MeshLambertMaterial({ color: THEME.ink });
+      const rimMat = new THREE.MeshLambertMaterial({ color: 0x1b1e22 });
+      const spokeMat = new THREE.MeshLambertMaterial({ color: 0x6b6f76 });
+
+      // open spoked wheels front & rear
+      const R = 0.6;
+      addSpokedWheel(root, -0.92, R, 0.045, rimMat, spokeMat);
+      addSpokedWheel(root, 0.92, R, 0.045, rimMat, spokeMat);
+
+      // key frame joints (y, z), all in the centre plane
+      const BB = [0.5, 0.0];          // bottom bracket / crank
+      const seatCl = [1.12, 0.42];    // seat cluster
+      const headTop = [1.08, -0.6];   // top of head tube (bars)
+      const headBot = [0.86, -0.66];  // bottom of head tube (fork crown)
+      const rear = [R, 0.92], front = [R, -0.92];
+      const T = 0.045;
+      root.add(
+        spanMesh(BB[0], BB[1], seatCl[0], seatCl[1], T, frameMat, 0, 'y'),      // seat tube
+        spanMesh(BB[0], BB[1], headBot[0], headBot[1], T, frameMat, 0, 'y'),    // down tube
+        spanMesh(seatCl[0], seatCl[1], headTop[0], headTop[1], T, frameMat, 0, 'y'), // top tube
+        spanMesh(headTop[0], headTop[1], headBot[0], headBot[1], 0.05, frameMat, 0, 'y'), // head tube
+        // twin chain- & seat-stays out to the rear hub
+        spanMesh(BB[0], BB[1], rear[0], rear[1], 0.03, frameMat, 0.06, 'y'),
+        spanMesh(BB[0], BB[1], rear[0], rear[1], 0.03, frameMat, -0.06, 'y'),
+        spanMesh(seatCl[0], seatCl[1], rear[0], rear[1], 0.03, frameMat, 0.06, 'y'),
+        spanMesh(seatCl[0], seatCl[1], rear[0], rear[1], 0.03, frameMat, -0.06, 'y'),
+        // twin fork blades to the front hub
+        spanMesh(headBot[0], headBot[1], front[0], front[1], 0.03, rimMat, 0.07, 'y'),
+        spanMesh(headBot[0], headBot[1], front[0], front[1], 0.03, rimMat, -0.07, 'y')
+      );
+      // saddle, stem + handlebar, crank arm + pedal
+      const saddle = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.09, 0.44), darkMat);
+      saddle.position.set(0, seatCl[0] + 0.18, seatCl[1] + 0.06);
+      const stem = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.24), darkMat);
+      stem.position.set(0, headTop[0] + 0.06, headTop[1] - 0.1);
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.07, 0.07), darkMat);
+      bar.position.set(0, headTop[0] + 0.1, headTop[1] - 0.22);
+      const crank = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.34, 0.06), darkMat);
+      crank.position.set(0.1, BB[0], BB[1]);
+      const pedal = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.05, 0.2), darkMat);
+      pedal.position.set(0.14, BB[0] - 0.16, BB[1]);
+      root.add(saddle, stem, bar, crank, pedal);
+
+      addRider(root, { hipY: seatCl[0] + 0.24, hipZ: seatCl[1] + 0.06, lean: 0.34, helmet: THEME.blue, barY: headTop[0] + 0.12, barZ: headTop[1] - 0.22, footY: BB[0] - 0.14, footZ: BB[1] + 0.02 });
+
+      function paint(_combo, fever) {
+        frameMat.color.set(fever ? THEME.yellow : THEME.shu);
+      }
+      return { root, paint, halfW: HW, halfL: L / 2, name: 'BICYCLE' };
+    }
+
+    function buildPlayer() {
+      const g = new THREE.Group();
+      const vehicles = [buildCar(), buildBike(), buildBicycle()];
+      let active = 0, lastCombo = 1, lastFever = false;
+
+      // flatten each ride's meshes for the crash-scatter + visibility toggle,
+      // and cache home transforms (relative to the identity sub-root == g space)
+      for (const v of vehicles) {
+        g.add(v.root);
+        v.meshes = [];
+        v.root.traverse((o) => { if (o.isMesh || o.isSprite) v.meshes.push(o); });
+        v.pieces = v.meshes.map((o) => ({ obj: o, pos: o.position.clone(), rot: o.rotation.clone() }));
+        v.paint(1, false);
+      }
+
+      const api = {
+        group: g,
+        halfW: vehicles[0].halfW,
+        halfL: vehicles[0].halfL,
+        pieces: vehicles[0].pieces,
+        vehicle: 0,
+        vehicleCount: vehicles.length,
+        vehicleName: vehicles[0].name,
+        paintLivery(combo, fever) {
+          lastCombo = combo; lastFever = fever;
+          vehicles[active].paint(combo, fever);
+        },
+        setVehicle(idx) {
+          idx = ((idx % vehicles.length) + vehicles.length) % vehicles.length;
+          active = idx;
+          for (let i = 0; i < vehicles.length; i++) {
+            const vis = i === idx;
+            for (const o of vehicles[i].meshes) o.visible = vis;
+          }
+          api.halfW = vehicles[idx].halfW;
+          api.halfL = vehicles[idx].halfL;
+          api.pieces = vehicles[idx].pieces;
+          api.vehicle = idx;
+          api.vehicleName = vehicles[idx].name;
+          vehicles[idx].paint(lastCombo, lastFever);
+          return api.vehicleName;
+        },
+      };
+      api.setVehicle(0);
       scene.add(g);
-      return { group: g, tail, paintLivery, pieces, halfW: HW, halfL: L / 2 };
+      return api;
     }
     W.buildPlayer = buildPlayer;
 

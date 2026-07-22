@@ -14,7 +14,16 @@
   const KMH = 3.4;               // display conversion
   const KM = 0.000944;           // units → km (consistent with KMH)
   const STEER_VMAX = 16;         // lateral units/s at full lock
-  const X_CLAMP = 8.35;
+  const X_CLAMP = 8.35;          // right wall — your own carriageway edge
+  // the road is now TWO-WAY: the left wall reaches clear across the divider onto
+  // the far carriageway. Cross CENTER_X and you've SWITCHED to the other road —
+  // the camera rides across with you and re-centres on it.
+  const X_CLAMP_L = -21.3;       // left wall — just shy of the far barrier
+  const CENTER_X  = -10.5;       // the divider between the two carriageways
+  const OTHER_CENTER = -17.15;   // centre of the far road (mean of ONCOMING_X)
+  const ONCOMING_HW = 1.05;      // oncoming car half-width  (body 2.1 wide)
+  const ONCOMING_HL = 2.3;       // oncoming car half-length (body 4.6 long)
+  const HEADON_MULT = 2;         // head-on shave pays double — highest risk on the road
   const TIER_AT = [0, 38, 54, 70];      // baseSpeed thresholds
   const DECAY = 4.5;             // combo lifetime, seconds
   const COMBO_MAX = 8;
@@ -124,13 +133,16 @@
   let steerL = false, steerR = false, vx = 0;
   let score = 0, dist = 0, combo = 1, comboTimer = 0;
   let fever = false, feverTime = 0;
-  let nearMisses = 0, bestCombo = 1, topSpeed = 0;
+  let nearMisses = 0, bestCombo = 1, topSpeed = 0, headOns = 0;
+  let onOtherRoad = false;
   let tier = 0, nextMilestone = 10000;
   let best = parseInt(store.get('hiyari-best') || '0', 10) || 0;
   let bestPassedShown = false;
   let fovKick = 0;
   let lastStampMesh = null;
   let camX = 0;
+  let camRoadShift = 0;                    // eased 0→1 as the camera rides to the far road
+  let camShiftX = 0;                        // camRoadShift × OTHER_CENTER, used by chasePose
   let clockT = 0;
 
   /* v2 systems: boost / drift / air / curves */
@@ -187,7 +199,7 @@
     turnSignal: $('#turn-signal'), turnArrow: $('#turn-arrow'), turnText: $('#turn-text'),
     // v4 HUD
     ammoPips: $('#ammo-pips'), shieldTag: $('#shield-tag'), vignette: $('#vignette'),
-    rCrate: $('#r-crate'), rBlast: $('#r-blast'),
+    rCrate: $('#r-crate'), rBlast: $('#r-blast'), rHeadon: $('#r-headon'),
     rSling: $('#r-sling'), rApex: $('#r-apex'), rTrick: $('#r-trick'), rOd: $('#r-od'),
   };
 
@@ -273,7 +285,7 @@
     n.className = 'stamp ' + (side < 0 ? 'left' : 'right') + ' ' + tierDef.cls;
     n.children[0].textContent = tierDef.jp;
     n.children[1].textContent = tierDef.word;
-    n.children[2].textContent = '+' + fmt(pts);
+    n.children[2].textContent = pts ? '+' + fmt(pts) : '';
     gsap.killTweensOf(n);
     gsap.timeline()
       .fromTo(n, { opacity: 1, scale: RM ? 1 : 1.45, rotation: -4, x: 0, skewX: 0 },
@@ -491,21 +503,30 @@
     });
   }
 
-  /* ---------- oncoming silhouettes ---------- */
+  /* ---------- oncoming traffic (now a real head-on carriageway) ---------- */
   const oncoming = [];
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 8; i++) {
     const g = world.buildOncoming();
-    const o = { g, lx: world.ONCOMING_X[i % 2], speed: 30 + Math.random() * 26, played: false };
+    const o = { g, lx: world.ONCOMING_X[i % 2], speed: 30 + Math.random() * 26,
+      played: false, passed: false, swelled: false, minGap: Infinity, prevZ: 0 };
     oncoming.push(o);
-    g.position.set(o.lx, 0, -80 - i * 110 - Math.random() * 40);
+    g.position.set(o.lx, 0, -80 - i * 70 - Math.random() * 40);
     g.visible = true;
   }
   function resetOncoming(o) {
-    o.g.position.z = -480 - Math.random() * 140;
+    gsap.killTweensOf(o);                 // lx deflection tween
+    gsap.killTweensOf(o.g.position);      // crash shove
+    gsap.killTweensOf(o.g.rotation);      // crash / shield spin
+    o.g.position.z = -430 - Math.random() * 160;
     o.lx = world.ONCOMING_X[Math.random() < 0.5 ? 0 : 1];
     o.g.position.x = o.lx;
+    o.g.rotation.set(0, 0, 0);
     o.speed = 30 + Math.random() * 26;
     o.played = false;
+    o.passed = false;
+    o.swelled = false;
+    o.minGap = Infinity;
+    o.prevZ = o.g.position.z;
   }
 
   /* ---------- near-miss economy ---------- */
@@ -579,6 +600,43 @@
         setTimeout(() => { o.material = old; o.userData.flashing = false; }, 34);
       }
     });
+  }
+
+  /* ---------- head-on near-miss (the far carriageway) ----------
+     shaving a car on the other road closes at speed+theirs — the tightest pass
+     on the board, so it pays double and stamps 対向 (taikō, oncoming). */
+  function awardOncoming(o) {
+    const g = o.minGap;
+    let tierDef = null;
+    for (const t of NEAR_TIERS) { if (g <= t.gap) { tierDef = t; break; } }
+    if (!tierDef) return;
+
+    combo = Math.min(COMBO_MAX, combo + 1);
+    comboTimer = DECAY;
+    nearMisses++;
+    headOns++;
+    bestCombo = Math.max(bestCombo, combo);
+    const pts = 100 * tierDef.mult * combo * (fever ? 2 : 1) * HEADON_MULT;
+    score += pts;
+    boostMeter = Math.min(100, boostMeter + 12 + tierDef.mult * 5);
+
+    const side = Math.sign(o.lx - player.group.position.x) || -1;
+    showStamp(side, { jp: '対向', word: 'HEAD-ON ' + tierDef.word, cls: 't3' }, pts);
+    audio.whoosh(side * 0.9, combo);
+    audio.thunk(true);
+    inkSlap(tierDef.mult === 3 ? 0.16 : 0.1);
+    if (!RM) fovKick = Math.min(8, fovKick + (tierDef.mult === 3 ? 4 : 2.5));
+
+    const midX = (o.lx + player.group.position.x) / 2;
+    world.stampRoad('対向', midX, 2.5, {
+      jp: true, width: 4 + tierDef.mult * 1.6, color: THEME.shu, tilt: side * 3,
+    });
+
+    if (combo === COMBO_MAX) enterFever();
+    else player.paintLivery(combo, fever);
+    syncStripes();
+
+    gsap.fromTo(el.scoreBlock, { scale: 1 }, { scale: 1.05, duration: 0.12, yoyo: true, repeat: 1, ease: 'power2.out' });
   }
 
   /* ---------- crash ---------- */
@@ -664,6 +722,7 @@
     });
     el.rDist.textContent = '0.0 km';
     el.rMiss.textContent = '0';
+    el.rHeadon.textContent = '0';
     el.rCombo.textContent = '×1';
     el.rSpeed.textContent = '0 km/h';
     el.rDrift.textContent = '0';
@@ -701,6 +760,7 @@
     const vals = [
       [el.rDist, { v: 0 }, dist * KM, (o) => o.v.toFixed(1) + ' km'],
       [el.rMiss, { v: 0 }, nearMisses, (o) => String(Math.round(o.v))],
+      [el.rHeadon, { v: 0 }, headOns, (o) => String(Math.round(o.v))],
       [el.rCombo, { v: 0 }, bestCombo, (o) => '×' + Math.round(o.v)],
       [el.rSpeed, { v: 0 }, Math.round(topSpeed), (o) => Math.round(o.v) + ' km/h'],
       [el.rDrift, { v: 0 }, driftTotal, (o) => fmt(o.v)],
@@ -773,10 +833,11 @@
     laneChangerBusy = false;
     world.clearDecals();
     lastStampMesh = null;
-    oncoming.forEach((o, i) => { resetOncoming(o); o.g.position.z = -120 - i * 110; });
+    oncoming.forEach((o, i) => { resetOncoming(o); o.g.position.z = -110 - i * 80; o.prevZ = o.g.position.z; });
+    onOtherRoad = false; camRoadShift = 0; camShiftX = 0;
 
     score = 0; dist = 0; combo = 1; comboTimer = 0;
-    fever = false; feverTime = 0; nearMisses = 0; bestCombo = 1; topSpeed = 0;
+    fever = false; feverTime = 0; nearMisses = 0; bestCombo = 1; topSpeed = 0; headOns = 0;
     nextMilestone = 10000; bestPassedShown = false;
 
     // v2 state
@@ -916,8 +977,10 @@
   function chasePose(outPos, outLook) {
     const px = player.group.position.x;
     const py = player.group.position.y;
+    // the whole rig is translated by camShiftX so the far carriageway frames up
+    // exactly like the near one does — the car sits centred on whichever road it's on
     outPos.set(camX, 5.3 - speedNorm * 0.7 + py * 0.55, 10.6 - speedNorm * 1.1);
-    outLook.set(px * 0.82, 1.35 + py * 0.4, -24);
+    outLook.set(camShiftX * 0.18 + px * 0.82, 1.35 + py * 0.4, -24);
   }
 
   function commitStart() {
@@ -1356,6 +1419,7 @@
       case 'ArrowUp': case 'KeyW': wantBoost = true; e.preventDefault(); break;
       case 'ShiftLeft': case 'ShiftRight': case 'Space': driftHeld = true; e.preventDefault(); break;
       case 'KeyF': fire(); break;
+      case 'KeyC': cycleVehicle(); break;
       case 'KeyM': toggleMute(); break;
       case 'KeyP': togglePause(); break;
       case 'KeyR':
@@ -1457,6 +1521,22 @@
     syncMusicBtn();
     audio.uiBlip();
   });
+
+  /* ride swap — car → bike → bicycle, cycled with C or the RIDE button.
+     grounded run only, so the crash pieces / hitbox never swap mid-air. */
+  const vehicleBtn = document.getElementById('vehicle-btn');
+  function syncVehicleBtn() {
+    if (vehicleBtn) vehicleBtn.textContent = 'RIDE — ' + player.vehicleName;
+  }
+  syncVehicleBtn();
+  function cycleVehicle() {
+    if (state !== 'run' || airborne || paused || helpOpen) return;
+    const name = player.setVehicle(player.vehicle + 1);
+    syncVehicleBtn();
+    audio.uiBlip();
+    showStamp(1, { jp: '車両変更', word: name, cls: 't2' }, 0);
+  }
+  if (vehicleBtn) vehicleBtn.addEventListener('click', () => { audio.resume(); cycleVehicle(); });
 
   /* how-to-play overlay — freezes the drive (helpOpen gate in frame()) so a
      player can read the controls without the car ploughing on without them */
@@ -1666,7 +1746,7 @@
 
     p.x += vx * dt;
     if (p.x > X_CLAMP) { p.x = X_CLAMP; vx = Math.min(0, vx); }
-    if (p.x < -X_CLAMP) { p.x = -X_CLAMP; vx = Math.max(0, vx); }
+    if (p.x < X_CLAMP_L) { p.x = X_CLAMP_L; vx = Math.max(0, vx); }
 
     if (airborne) {
       // in the air the SAME keys become trick controls — continuous rotation you "fly"
@@ -1822,16 +1902,65 @@
     else draftCharge = Math.max(0, draftCharge - dt / DRAFT_DECAY);
   }
 
+  /* a head-on hit deflects the oncoming car via its logical x (the per-frame
+     x-assignment below reads o.lx, so tweening the mesh directly wouldn't hold) */
+  function shieldSaveOncoming(o) {
+    shieldOn = false;
+    aura.visible = false;
+    syncAmmo();
+    landGrace = SHIELD_GRACE;
+    o.passed = true;
+    const dir = Math.sign(o.lx - player.group.position.x) || -1;
+    gsap.killTweensOf(o);
+    gsap.to(o, { lx: o.lx + dir * 6, duration: 0.8, ease: 'power2.in' });
+    gsap.to(o.g.rotation, { y: dir * 2.6, duration: 0.8, ease: 'power1.in' });
+    showStamp(dir, { jp: 'バリア', word: 'SHIELD SAVED', cls: 't3' }, 0);
+    world.stampRoad('バリア', player.group.position.x, 2.5, { jp: true, width: 5 });
+    audio.shieldSave();
+    inkSlap(0.16);
+    if (!RM) fovKick = Math.min(9, fovKick + 4);
+  }
+
   function updateOncoming(dt) {
+    const px = player.group.position.x;
+    const live = state === 'run' && !airborne;
+    const halfWsum = ONCOMING_HW + player.halfW;
+    const halfLsum = ONCOMING_HL + player.halfL;
     for (const o of oncoming) {
-      o.g.position.z += (speed + o.speed) * dt;
-      o.g.position.x = o.lx + world.bendX(o.g.position.z);
-      if (!o.played && o.g.position.z > 4) {
+      o.prevZ = o.g.position.z;
+      o.g.position.z += (speed + o.speed) * dt;      // closing speed = ours + theirs
+      const z = o.g.position.z;
+      o.g.position.x = o.lx + world.bendX(z);
+
+      if (!o.played && z > 4) {
         o.played = true;
         if (state === 'run') audio.passby(-0.75);
       }
-      if (o.g.position.z > world.KILL_Z + 8) resetOncoming(o);
+
+      if (live) {
+        const dx = Math.abs(o.lx - px);
+        // track the tightest lateral gap while it's level with the player
+        if (Math.abs(z) < halfLsum + 2.5) o.minGap = Math.min(o.minGap, dx - halfWsum);
+
+        // swept collision: at head-on closing speed a car jumps several units
+        // per frame, so test the whole segment it covered against the player band
+        const lo = Math.min(o.prevZ, z), hi = Math.max(o.prevZ, z);
+        if (landGrace <= 0 && dx < halfWsum * 0.9 && lo < halfLsum && hi > -halfLsum) {
+          if (shieldOn) { shieldSaveOncoming(o); }
+          else { crash({ group: o.g }); return; }
+        }
+
+        // fully passed behind the player → judge the head-on shave
+        if (!o.passed && o.prevZ < halfLsum && z >= halfLsum) {
+          o.passed = true;
+          if (o.minGap > 0) awardOncoming(o);
+        }
+      }
+
+      if (z > world.KILL_Z + 8) resetOncoming(o);
     }
+
+    onOtherRoad = px < CENTER_X;
   }
 
   function updateWreck(dt) {
@@ -1847,7 +1976,16 @@
 
   function updateCamera(raw) {
     const px = player.group.position.x;
-    camX += (px * 0.55 - camX) * (1 - Math.exp(-4.5 * raw));
+    // ride the camera across to whichever carriageway the car is on. camRoadShift
+    // eases 0→1 the instant you cross the divider, so the whole view slides over
+    // to the far road and settles centred on it — a visible "switch", not a drift.
+    const wantShift = (state === 'run' || state === 'starting') && px < CENTER_X ? 1 : 0;
+    camRoadShift += (wantShift - camRoadShift) * (1 - Math.exp(-3.2 * raw));
+    camShiftX = camRoadShift * OTHER_CENTER;
+    // translate the follow target by the shift: on the near road it's px*0.55 as
+    // before; on the far road it re-centres about OTHER_CENTER with the same lead
+    const camXTarget = camShiftX * 0.45 + px * 0.55;
+    camX += (camXTarget - camX) * (1 - Math.exp(-4.5 * raw));
 
     if (state === 'intro') {
       camera.position.copy(introPose.pos);
@@ -1944,6 +2082,7 @@
     if (state !== 'boot' && state !== 'intro') {
       world.scroll(speed * dt, dt);
       updateOncoming(dt);
+      world.updateMemes(raw, clockT);   // real-time drift, independent of hitstop
     }
 
     updateAmbient(raw);
@@ -1997,12 +2136,17 @@
       r.z = -100;
       r.group.visible = true;
     },
+    setVehicle: (i) => player.setVehicle(i),
     snap: () => ({
       state,
+      vehicle: player.vehicleName,
       px: player.group.position.x,
       speed: Math.round(speed * 10) / 10,
       combo,
       nearMisses,
+      headOns,
+      onOtherRoad,
+      camShiftX: Math.round(camShiftX * 100) / 100,
       score: Math.floor(score),
       boostMeter: Math.round(boostMeter),
       boosting,

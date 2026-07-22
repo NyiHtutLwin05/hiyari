@@ -56,7 +56,7 @@
   <div id="fever-band"><span>ヒヤリハット FEVER — POINTS ×2</span></div>
 
   <div id="stamps"></div>
-  <div id="hint">&#8592;&#8594; STEER &nbsp;&middot;&nbsp; SHIFT — DRIFT &nbsp;&middot;&nbsp; &#8593; — BOOST &nbsp;&middot;&nbsp; F — FIRE &nbsp;&middot;&nbsp; RAMP → AIR TRICKS &nbsp;&middot;&nbsp; PRESS <b>?</b> / HOW TO PLAY</div>
+  <div id="hint">&#8592;&#8594; STEER &nbsp;&middot;&nbsp; SHIFT — DRIFT &nbsp;&middot;&nbsp; &#8593; — BOOST &nbsp;&middot;&nbsp; F — FIRE &nbsp;&middot;&nbsp; C — RIDE &nbsp;&middot;&nbsp; RAMP → AIR TRICKS &nbsp;&middot;&nbsp; PRESS <b>?</b> / HOW TO PLAY</div>
 </div>
 
 <button id="boost-btn" type="button" aria-label="Hold to boost"><span lang="ja">加速</span></button>
@@ -126,6 +126,7 @@
     <div class="ledger">
       <div class="row"><span class="lbl">DISTANCE</span><span class="leader"></span><span class="val" id="r-dist">0.0 km</span></div>
       <div class="row"><span class="lbl">NEAR MISSES</span><span class="leader"></span><span class="val" id="r-miss">0</span></div>
+      <div class="row"><span class="lbl">HEAD-ON</span><span class="leader"></span><span class="val" id="r-headon">0</span></div>
       <div class="row"><span class="lbl">BEST COMBO</span><span class="leader"></span><span class="val" id="r-combo">&times;1</span></div>
       <div class="row"><span class="lbl">TOP SPEED</span><span class="leader"></span><span class="val" id="r-speed">0 km/h</span></div>
       <div class="row"><span class="lbl">DRIFT INK</span><span class="leader"></span><span class="val" id="r-drift">0</span></div>
@@ -156,6 +157,7 @@
 </section>
 
 <div id="audio-btns">
+  <button id="vehicle-btn" type="button" aria-label="Change vehicle">RIDE&nbsp;—&nbsp;CAR</button>
   <button id="help-btn" type="button" aria-label="How to play">HOW&nbsp;TO&nbsp;PLAY</button>
   <button id="music-btn" type="button" aria-label="Toggle music">MUSIC&nbsp;ON</button>
   <button id="mute-btn" type="button" aria-label="Toggle sound">SOUND&nbsp;ON</button>
@@ -178,6 +180,7 @@
           <li><span class="k">▲</span><span class="d">Boost (<b>W</b>) — spends the BOOST gauge</span></li>
           <li><span class="k">SHIFT</span><span class="d">Drift — hold while steering (or <b>SPACE</b>)</span></li>
           <li><span class="k">F</span><span class="d">Fire the cannon — clears a car, spends 1 ammo</span></li>
+          <li><span class="k">C</span><span class="d">Change ride — <b>car → bike → bicycle</b> (or the <b>RIDE</b> button). Smaller rides slip tighter gaps.</span></li>
           <li><span class="k">P</span><span class="d">Pause · <span class="k2">M</span> mute · <span class="k2">R</span> restart</span></li>
         </ul>
         <h3 class="air">✈ IN THE AIR (after a ramp)</h3>
@@ -203,6 +206,7 @@
         <h3 class="air">↩ CORNERS &amp; SUPPLIES</h3>
         <ul class="help-list">
           <li><span class="d">When <b>TURN LEFT / RIGHT</b> flashes, steer that way — <b>hold DRIFT through the apex</b> for triple ink.</span></li>
+          <li><span class="d">Steer left over the yellow line to <b>switch to the other road</b> — the camera rides across with you. Cars there come <b>head-on</b>; shaving one pays <b>×2 ink</b>, a hit is a crash.</span></li>
           <li><span class="d">Yellow <b>補給 crates</b> hold <b>AMMO</b> or a <b>SHIELD</b> — shoot them or drive through. The shield blocks <b>one</b> crash.</span></li>
         </ul>
       </div>

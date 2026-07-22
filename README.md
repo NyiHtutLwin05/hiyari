@@ -19,6 +19,8 @@ Weave through traffic at 200 km/h — every close call is stamped onto the aspha
 - [Controls](#-controls) — **desktop & mobile, fully explained**
 - [How to score](#-how-to-score)
 - [Cornering & drifting](#-cornering--drifting)
+- [The two-way road — switch carriageways](#-the-two-way-road--switch-carriageways)
+- [Change your ride — car · bike · bicycle](#-change-your-ride--car--bike--bicycle)
 - [The cannon, supply crates & shield](#-the-cannon-supply-crates--shield)
 - [Stunts (the ramp air-game)](#-stunts--the-air-game)
 - [Sound](#-sound)
@@ -47,6 +49,9 @@ The night itself is part of the picture: a **twinkling starfield** over the fog 
 **smearing across the wet asphalt**, and a speed-deepening **vignette** that frames
 the road the faster you go.
 
+> 🌝 **Easter egg:** keep an eye on the sky — a couple of familiar faces drift by up
+> there among the stars. (They're bundled right into the single-file build.)
+
 ---
 
 ## 🎮 Controls
@@ -61,6 +66,7 @@ the road the faster you go.
 | **`↑`**  (or **`W`**) | **Boost** — spends the `BOOST` gauge you fill with near-misses |
 | **`SHIFT`**  (or **`SPACE`**) | **Drift** — *hold it while steering* to slide |
 | **`F`** | **Fire the cannon** — clears a car off the road, spends 1 ammo |
+| **`C`** | **Change ride** — car → bike → bicycle (or the **RIDE** button) |
 | **`P`** | Pause |
 | **`M`** | Mute all sound |
 | **`R`** | Restart (instant, on the results screen) · `Enter` also restarts |
@@ -94,6 +100,7 @@ fills — when it tops out, you launch. The commit has to be *earned*.
 | Move | What it is | Reward |
 |------|-----------|--------|
 | **Near-miss** | Pass a car within ~1.3 lanes. The tighter, the better (`CLOSE → CLOSER → INCHES!`). | `+100 × tier × combo` |
+| **Head-on** | Switch to the other road and shave an **oncoming** car. | **×2** ink — the tightest pass on the road |
 | **Combo** | Consecutive near-misses before the timer de-inks. | Multiplies every score |
 | **FEVER** | Reach combo **×8**. | Points **×2**, red sky |
 | **Drift near-miss** | Shave a car *mid-slide*. | **×2** ink (**×3** through an apex) |
@@ -133,6 +140,42 @@ shave while sliding.
 > so ordinary steering can always hold a corner. Drifting is a **reward**, not a
 > requirement — and it actually looks like a drift now: the tail steps out and the nose
 > counter-steers into the slide.
+
+---
+
+## ↔️ The two-way road — switch carriageways
+
+New in **v5** — the expressway is now a **two-way road** you can **switch across**. The
+raised median is gone; the divider is a crossable **double-yellow line**. Steer left over
+it and you move onto the **far carriageway** — and **the camera rides across with you**,
+re-centring on the new road so it frames up exactly like your own side. Steer back right
+and the camera slides home again.
+
+- The far road carries **対向 (taikō — oncoming)** traffic that comes **head-on**.
+  Closing speed is **yours + theirs**, so it's the tightest pass on the board: shave a
+  car for **×2 ink** (still feeding combo, FEVER, and boost) — clip one and it's a crash.
+- A pure **risk/reward escape valve**: when your lanes wall up, switch roads to slip
+  past — then switch back before a head-on finds you.
+- Your **SHIELD** blocks a head-on hit just like any other crash.
+
+> Your run's **HEAD-ON** count is tallied on the results ledger.
+
+---
+
+## 🏍️ Change your ride — car · bike · bicycle
+
+Press **`C`** (or tap the **RIDE** button, top-right) to swap between three rides,
+mid-run:
+
+| Ride | Feel |
+|------|------|
+| 🚗 **Car** | The kei-racer — the classic HIYARI wedge, biggest hitbox. |
+| 🏍️ **Bike** | A sport motorbike — narrower, slips through gaps a car can't. |
+| 🚲 **Bicycle** | Tiniest hitbox of all — thread traffic by a whisker. |
+
+Each ride has its own **collision box**, so a smaller one is harder to hit and can
+shave far closer — the whole crash-explosion (rider and all) is rebuilt per ride. Your
+choice sticks across restarts.
 
 ---
 
