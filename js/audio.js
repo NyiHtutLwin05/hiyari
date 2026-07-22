@@ -16,8 +16,9 @@
   //     BED_* mix constants below) so they colour the drive instead of
   //     drowning it;
   //   • the engine is the hero — it revs cleanly with speed;
-  //   • MUSIC is now a real streamed track (AC/DC), defaulting ON and
-  //     routed through the music bus. The MUSIC button silences it.
+  //   • MUSIC is now a real streamed PLAYLIST — Tokyo Drift first, then
+  //     AC/DC — defaulting ON and routed through the music bus. It loops
+  //     back to the top of the playlist. The MUSIC button silences it.
   //     Flip AUDIO_DISABLED to true to silence everything.
   const AUDIO_DISABLED = false;
 
@@ -28,12 +29,15 @@
 
   const PENTA = [261.63, 293.66, 329.63, 392.0, 440.0]; // C D E G A
 
-  // Background music TRACK — a real audio file streamed through the music bus.
-  // In dev it points at the audio/ folder; build.js overrides
-  // window.HIYARI_MUSIC_SRC with a base64 data: URI so the dist stays offline.
-  const MUSIC_SRC =
-    (typeof window !== 'undefined' && window.HIYARI_MUSIC_SRC) ||
-    ('audio/' + encodeURIComponent('AC_DC - Highway to Hell [Audio].mp3'));
+  // Background music PLAYLIST — real audio files streamed through the music
+  // bus, in order: Tokyo Drift first, then AC/DC, then looping back to the top.
+  // In dev these point at the audio/ folder; build.js overrides
+  // window.HIYARI_MUSIC_SRCS with base64 data: URIs so the dist stays offline.
+  const MUSIC_TRACKS =
+    (typeof window !== 'undefined' && window.HIYARI_MUSIC_SRCS) || [
+      'audio/' + encodeURIComponent('Tokyo Drift - Teriyaki Boyz [ MUSIC VIDEO ] HD.mp3'),
+      'audio/' + encodeURIComponent('AC_DC - Highway to Hell [Audio].mp3'),
+    ];
 
   // music bus volume per game mode (the track loops the whole time)
   const MUSIC_VOL = { intro: 0.34, run: 0.46, fever: 0.58, results: 0.32 };
@@ -174,15 +178,23 @@
       this._bar = 0;
       this._nextT = 0;
 
-      // --- background music track (streamed, looped) ---
+      // --- background music playlist (streamed) ---
       // Routed through the WebAudio graph via a MediaElementSource so the
-      // mute button, crash duck and compressor all reach it too.
+      // mute button, crash duck and compressor all reach it too. One <audio>
+      // element whose src advances on 'ended': Tokyo Drift → AC/DC → loop.
+      this._trackIdx = 0;
       try {
         const track = this.track = new Audio();
-        track.src = MUSIC_SRC;
-        track.loop = true;
+        track.src = MUSIC_TRACKS[0];
+        track.loop = false;               // playlist advances manually, not per-track loop
         track.preload = 'auto';
         track.crossOrigin = 'anonymous';
+        track.addEventListener('ended', () => {
+          this._trackIdx = (this._trackIdx + 1) % MUSIC_TRACKS.length;
+          track.src = MUSIC_TRACKS[this._trackIdx];
+          const p = track.play();
+          if (p && p.catch) p.catch(() => {});
+        });
         this.trackNode = ctx.createMediaElementSource(track);
         this.trackNode.connect(this.musicGain);
       } catch (e) {

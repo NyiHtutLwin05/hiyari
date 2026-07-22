@@ -180,11 +180,12 @@ HIYARI's effects are **100% procedural Web Audio** — synthesized live, nothing
 - A **corner-warning rally note**, boost turbine, wind, stamp thunks, and a proper crash.
 - **Cannon pops**, crate **wood-cracks**, pickup **dings**, and the shield's deep **gong** when it saves you.
 
-Over that runs a **background music track** (_AC/DC — Highway to Hell_), streamed through
-the same Web Audio bus so mute, the crash duck and the compressor all reach it. **Music is
-ON by default** — hit **MUSIC** to silence just the track (the choice is remembered);
-**SOUND** mutes everything, and **M** does too. In the single-file `dist/hiyari.html` the
-track is embedded as base64, so it still plays fully offline.
+Over that runs a **background music playlist** — _Tokyo Drift (Teriyaki Boyz)_ first, then
+_AC/DC — Highway to Hell_, looping back to the top — streamed through the same Web Audio bus
+so mute, the crash duck and the compressor all reach it. **Music is ON by default** — hit
+**MUSIC** to silence just the playlist (the choice is remembered); **SOUND** mutes
+everything, and **M** does too. In the single-file `dist/hiyari.html` both tracks are
+embedded as base64, so they still play fully offline.
 
 ---
 

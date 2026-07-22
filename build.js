@@ -20,11 +20,16 @@ const audio = read('js/audio.js');
 const world = read('js/world.js');
 const main = read('js/main.js');
 
-// embed the background music track as a base64 data: URI so the dist file
+// embed the background music PLAYLIST as base64 data: URIs so the dist file
 // plays the soundtrack offline, straight from disk, with no audio/ folder.
-const musicFile = 'AC_DC - Highway to Hell [Audio].mp3';
-const musicB64 = fs.readFileSync(path.join(root, 'audio', musicFile)).toString('base64');
-const musicSrc = `data:audio/mpeg;base64,${musicB64}`;
+// Order matters: Tokyo Drift plays first, then AC/DC, then it loops back.
+const musicFiles = [
+  'Tokyo Drift - Teriyaki Boyz [ MUSIC VIDEO ] HD.mp3',
+  'AC_DC - Highway to Hell [Audio].mp3',
+];
+const musicSrcs = musicFiles.map(
+  (f) => `data:audio/mpeg;base64,${fs.readFileSync(path.join(root, 'audio', f)).toString('base64')}`
+);
 
 // pull the <body> markup out of index.html, dropping the external
 // <link>/<script src> references (everything is inlined below instead)
@@ -58,7 +63,7 @@ ${three}
 ${gsap}
 </script>
 <script>
-window.HIYARI_MUSIC_SRC = ${JSON.stringify(musicSrc)};
+window.HIYARI_MUSIC_SRCS = ${JSON.stringify(musicSrcs)};
 </script>
 <script>
 ${audio}
