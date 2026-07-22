@@ -172,9 +172,7 @@ crash). Airborne, you fly clean over traffic.
 
 ## 🔊 Sound
 
-HIYARI's audio is **100% procedural Web Audio** — no audio files, nothing copyrighted.
-
-This build ships as **racing sound effects, not a soundtrack**:
+HIYARI's effects are **100% procedural Web Audio** — synthesized live, nothing sampled:
 
 - A clean **engine** that revs with speed and throttle.
 - **Tyre screech** and a **chirp** when a drift breaks loose.
@@ -182,9 +180,11 @@ This build ships as **racing sound effects, not a soundtrack**:
 - A **corner-warning rally note**, boost turbine, wind, stamp thunks, and a proper crash.
 - **Cannon pops**, crate **wood-cracks**, pickup **dings**, and the shield's deep **gong** when it saves you.
 
-The noisy layers (wind / boost hiss and the beat) were pulled right down so the effects
-read clean. **Music is a separate, off-by-default toggle** — hit **MUSIC** if you want a
-Tokyo-street-racing beat under it. **SOUND** mutes everything; **M** does too.
+Over that runs a **background music track** (_AC/DC — Highway to Hell_), streamed through
+the same Web Audio bus so mute, the crash duck and the compressor all reach it. **Music is
+ON by default** — hit **MUSIC** to silence just the track (the choice is remembered);
+**SOUND** mutes everything, and **M** does too. In the single-file `dist/hiyari.html` the
+track is embedded as base64, so it still plays fully offline.
 
 ---
 
@@ -238,7 +238,8 @@ hiyari/
 ├── js/
 │   ├── main.js         # state machine, physics, scoring, input, choreography
 │   ├── world.js        # Three.js scene: road, traffic, ramps, decals, corners
-│   └── audio.js        # procedural Web Audio engine & SFX
+│   └── audio.js        # procedural Web Audio engine, SFX & music-track bus
+├── audio/              # background music track (embedded into dist on build)
 └── vendor/
     ├── three.min.js
     └── gsap.min.js
@@ -250,7 +251,7 @@ hiyari/
 
 - **Rendering** — [Three.js](https://threejs.org/) (WebGL)
 - **Animation / timelines** — [GSAP](https://gsap.com/)
-- **Audio** — the browser's native **Web Audio API**, fully synthesized
+- **Audio** — the browser's native **Web Audio API**; synthesized SFX + a streamed music track
 - **Type** — Anton · Saira Condensed · Barlow · Noto Sans JP *(all OFL, embedded)*
 
 Everything is vanilla JavaScript — no framework, no bundler, no build dependencies.

@@ -1439,9 +1439,9 @@
   syncMuteBtn();
   el.muteBtn.addEventListener('click', () => { audio.init(); audio.resume(); toggleMute(); });
 
-  /* music toggle (independent of SFX). Default OFF — the user wants racing
-     SOUND EFFECTS, not a soundtrack; the button brings the beat back on demand. */
-  let musicOn = store.get('hiyari-music') === '1';
+  /* music toggle (independent of SFX). Default ON — plays the AC/DC background
+     track through the music bus; the button silences it (choice is persisted). */
+  let musicOn = store.get('hiyari-music') !== '0';
   audio._musicPref = musicOn;
   function syncMusicBtn() {
     el.musicBtn.textContent = musicOn ? 'MUSIC ON' : 'MUSIC OFF';

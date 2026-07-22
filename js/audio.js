@@ -16,9 +16,9 @@
   //     BED_* mix constants below) so they colour the drive instead of
   //     drowning it;
   //   • the engine is the hero — it revs cleanly with speed;
-  //   • MUSIC now defaults OFF (main.js) so a fresh player hears pure
-  //     racing SFX. The MUSIC button still brings the beat back if
-  //     wanted. Flip AUDIO_DISABLED to true to silence everything.
+  //   • MUSIC is now a real streamed track (AC/DC), defaulting ON and
+  //     routed through the music bus. The MUSIC button silences it.
+  //     Flip AUDIO_DISABLED to true to silence everything.
   const AUDIO_DISABLED = false;
 
   // bed mix — the constant "hiss" layers, kept low so SFX read clean
@@ -27,6 +27,16 @@
   const BED_SCREECH = 0.17;  // was 0.20 — tyre screech ceiling
 
   const PENTA = [261.63, 293.66, 329.63, 392.0, 440.0]; // C D E G A
+
+  // Background music TRACK — a real audio file streamed through the music bus.
+  // In dev it points at the audio/ folder; build.js overrides
+  // window.HIYARI_MUSIC_SRC with a base64 data: URI so the dist stays offline.
+  const MUSIC_SRC =
+    (typeof window !== 'undefined' && window.HIYARI_MUSIC_SRC) ||
+    ('audio/' + encodeURIComponent('AC_DC - Highway to Hell [Audio].mp3'));
+
+  // music bus volume per game mode (the track loops the whole time)
+  const MUSIC_VOL = { intro: 0.34, run: 0.46, fever: 0.58, results: 0.32 };
 
   class HiyariAudio {
     constructor() {
@@ -164,6 +174,21 @@
       this._bar = 0;
       this._nextT = 0;
 
+      // --- background music track (streamed, looped) ---
+      // Routed through the WebAudio graph via a MediaElementSource so the
+      // mute button, crash duck and compressor all reach it too.
+      try {
+        const track = this.track = new Audio();
+        track.src = MUSIC_SRC;
+        track.loop = true;
+        track.preload = 'auto';
+        track.crossOrigin = 'anonymous';
+        this.trackNode = ctx.createMediaElementSource(track);
+        this.trackNode.connect(this.musicGain);
+      } catch (e) {
+        this.track = null;   // no track — SFX still work, just no soundtrack
+      }
+
       this.ok = true;
     }
 
@@ -177,12 +202,14 @@
       this._mode = mode;
       if (!this.ok) return;
       const on = this.musicOn && mode !== 'off';
-      this.musicGain.gain.setTargetAtTime(on ? 0.34 : 0, this.ctx.currentTime, 0.4);
-      if (on && !this._timer) {
-        this._nextT = this.ctx.currentTime + 0.06;
-        this._step = 0;
-        this._bar = 0;
-        this._timer = setInterval(() => this._musicTick(), 40);
+      const vol = MUSIC_VOL[mode] || 0.4;
+      this.musicGain.gain.setTargetAtTime(on ? vol : 0, this.ctx.currentTime, 0.4);
+      if (!this.track) return;
+      if (on) {
+        const p = this.track.play();
+        if (p && p.catch) p.catch(() => {});   // autoplay gate — ignored, retries on next gesture
+      } else if (mode === 'off') {
+        this.track.pause();   // hard stop on crash; a plain toggle-off just goes silent
       }
     }
 
