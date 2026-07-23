@@ -889,6 +889,48 @@ button {
   color: color-mix(in srgb, var(--paper) 66%, transparent);
 }
 
+/* ============ police approach warning (which side it's closing from) ============ */
+#chase-warn {
+  position: absolute;
+  top: 50%;
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: color-mix(in srgb, var(--ink) 84%, transparent);
+  border: 2px solid var(--shu);
+  opacity: 0;
+  pointer-events: none;
+  white-space: nowrap;
+  will-change: opacity, transform;
+  transform: translateY(-50%);
+}
+/* pinned to whichever edge the patrol car is bearing down from */
+#chase-warn.from-left  { left: 12px;  flex-direction: row; }
+#chase-warn.from-right { right: 12px; flex-direction: row-reverse; }
+#chase-warn.from-right .cw-arrow { transform: scaleX(-1); }
+.cw-arrow {
+  font-size: clamp(20px, 3.4vw, 30px);
+  line-height: 1;
+  color: var(--shu);
+  animation: cw-jab 0.5s ease-in-out infinite;
+}
+#chase-warn.from-right .cw-arrow { animation-name: cw-jab-r; }
+@keyframes cw-jab   { 0%, 100% { transform: translateX(0); }  50% { transform: translateX(5px); } }
+@keyframes cw-jab-r { 0%, 100% { transform: scaleX(-1) translateX(0); } 50% { transform: scaleX(-1) translateX(5px); } }
+.cw-body { display: flex; align-items: center; gap: 7px; }
+.cw-lights { display: inline-flex; gap: 4px; }
+.cw-lights i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.cw-text {
+  font-family: var(--f-jp);
+  font-weight: 900;
+  font-size: clamp(11px, 1.5vw, 15px);
+  letter-spacing: 0.06em;
+  line-height: 1.05;
+  color: var(--shu);
+}
+
 /* ============ distraction cards (flashing notification bait) ============ */
 #distract-cards {
   position: fixed;

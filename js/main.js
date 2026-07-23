@@ -107,6 +107,11 @@
   const CH_DURATION     = 13;   // a pursuit calls itself off after this long (survive it)
   const CH_ESCAPE_PTS   = 1200; // ink for losing a tail
   const CH_BUST_PTS     = 400;  // ink for shooting a patrol car out
+  const CH_SPAWN_OFF    = 3.4;  // lateral offset it spawns at — gives the approach a SIDE to read
+  const CH_WARN_TIME    = 1.5;  // reaction window: it hangs back & barely homes so a dodge sticks
+  const CH_WARN_HOME    = 0.25; // homing multiplier during the warn window (near-frozen → dodgeable)
+  const CH_WARN_CLOSE   = 0.45; // closing multiplier during the warn window (hangs back, telegraphed)
+  const CH_WARN_SEE_Z   = 9;    // above this z it's still behind the camera → keep the edge warning up
 
   const fmt = (n) => Math.floor(n).toLocaleString('en-US');
   const store = {
@@ -195,6 +200,7 @@
   let sirenTimer = 0;
   let chasersBusted = 0, tailsLost = 0;
   let pursuitShown = false;
+  let cwSide = 0;   // side the police edge-warning currently points to (-1 left, +1 right, 0 hidden)
 
   player.group.position.set(LANE_X[2], 0, 0);
 
@@ -226,7 +232,7 @@
     rCrate: $('#r-crate'), rBlast: $('#r-blast'), rHeadon: $('#r-headon'),
     rSling: $('#r-sling'), rApex: $('#r-apex'), rTrick: $('#r-trick'), rOd: $('#r-od'),
     // v7 HUD: police pursuit
-    pursuit: $('#pursuit'), rChase: $('#r-chase'), distractCards: $('#distract-cards'),
+    pursuit: $('#pursuit'), chaseWarn: $('#chase-warn'), rChase: $('#r-chase'), distractCards: $('#distract-cards'),
   };
 
   /* ---------- score odometer ---------- */
@@ -747,6 +753,8 @@
     if (el.turnSignal) { gsap.killTweensOf(el.turnSignal); gsap.set(el.turnSignal, { opacity: 0 }); }
     if (el.pursuit) { gsap.killTweensOf(el.pursuit); gsap.set(el.pursuit, { opacity: 0 }); }
     pursuitShown = false;
+    if (el.chaseWarn) { gsap.killTweensOf(el.chaseWarn); gsap.set(el.chaseWarn, { opacity: 0 }); }
+    cwSide = 0;
     clearDistractCards();
     aura.visible = false;   // a crash means the shield wasn't armed — keep the wreck clean
 
@@ -958,6 +966,8 @@
     chasersBusted = 0; tailsLost = 0;
     if (el.pursuit) { gsap.killTweensOf(el.pursuit); el.pursuit.style.opacity = 0; }
     pursuitShown = false;
+    if (el.chaseWarn) { gsap.killTweensOf(el.chaseWarn); el.chaseWarn.style.opacity = 0; }
+    cwSide = 0;
     world.clearDistractors();
     clearDistractCards();
     distractTimer = 8;
@@ -2111,19 +2121,37 @@
     gsap.to(el.pursuit, { opacity: 0, duration: 0.4, ease: 'power2.in' });
   }
 
+  // edge warning telling the player which side an off-camera patrol car is closing from
+  function showChaseWarn(side) {
+    if (!el.chaseWarn || side === cwSide) return;
+    cwSide = side;
+    el.chaseWarn.classList.toggle('from-left', side < 0);
+    el.chaseWarn.classList.toggle('from-right', side > 0);
+    gsap.killTweensOf(el.chaseWarn);
+    gsap.to(el.chaseWarn, { opacity: 1, duration: 0.2, ease: 'power2.out' });
+  }
+  function hideChaseWarn() {
+    if (!el.chaseWarn || cwSide === 0) return;
+    cwSide = 0;
+    gsap.killTweensOf(el.chaseWarn);
+    gsap.to(el.chaseWarn, { opacity: 0, duration: 0.3, ease: 'power2.in' });
+  }
+
   function spawnChaser() {
     const ch = chasers.find((c) => !c.live);
     if (!ch) return;
     ch.live = true;
     ch.dead = false;
     ch.age = 0;
-    ch.x = player.group.position.x;
+    // pick a side to come from, hugging the far edge of it if the player's already at the rail
+    ch.side = player.group.position.x > CENTER_X ? -1 : (Math.random() < 0.5 ? -1 : 1);
+    ch.x = player.group.position.x + ch.side * CH_SPAWN_OFF;
     ch.z = CH_SPAWN_Z + Math.random() * 6;
     ch.lit = Math.random() * 6;
     ch.group.rotation.set(0, 0, 0);
     ch.group.position.set(ch.x, 0, ch.z);
     ch.group.visible = true;
-    audio.siren(Math.sign(ch.x - player.group.position.x) * 0.4);
+    audio.siren(ch.side * 0.4);
     showPursuitBanner();
     showStamp(-1, { jp: '警察', word: 'PURSUIT', cls: 't3' }, 0);
   }
@@ -2162,10 +2190,15 @@
       ch.blue.lamp.scale.setScalar(s > 0 ? 0.8 : 1.3);
 
       ch.age += dt;
+      // warn window: it hangs back off your quarter and barely tracks, so the player
+      // has a real beat to read the side and weave away before it commits to the ram
+      const warning = ch.age < CH_WARN_TIME;
+      const homeRate = CH_HOME_RATE * (warning ? CH_WARN_HOME : 1);
       // laggy lateral homing — juke sideways and it overshoots
-      ch.x += (px - ch.x) * (1 - Math.exp(-CH_HOME_RATE * dt));
+      ch.x += (px - ch.x) * (1 - Math.exp(-homeRate * dt));
       // closing rate: eats into you when slow, drops back when you're flat-out
-      const approach = CH_BASE_CLOSE - speedNorm * CH_SPEED_FACTOR;
+      let approach = CH_BASE_CLOSE - speedNorm * CH_SPEED_FACTOR;
+      if (warning) approach *= CH_WARN_CLOSE;
       ch.z -= approach * dt;
       ch.group.position.set(ch.x + world.bendX(ch.z), 0, ch.z);
       ch.group.rotation.y = -(px - ch.x) * 0.05;   // nose tracks toward your lane
@@ -2210,6 +2243,16 @@
         if (near) audio.siren(Math.sign(near.x - px) * 0.4);
       }
     }
+
+    // edge warning: point to the nearest patrol car still lurking behind the camera.
+    // once it draws alongside (z drops below the see line) the player can see it — drop the arrow.
+    let warnCh = null;
+    for (const c of chasers) {
+      if (!c.live || c.dead || c.z <= CH_WARN_SEE_Z) continue;
+      if (!warnCh || c.z < warnCh.z) warnCh = c;
+    }
+    if (warnCh) showChaseWarn(Math.sign(warnCh.x - px) || warnCh.side || -1);
+    else hideChaseWarn();
 
     // pull the banner down once no patrol car is actively hunting
     if (!chasers.some((c) => c.live && !c.dead)) hidePursuitBanner();
