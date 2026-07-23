@@ -55,6 +55,12 @@
   </div>
   <div id="fever-band"><span>ヒヤリハット FEVER — POINTS ×2</span></div>
 
+  <div id="pursuit" aria-hidden="true">
+    <span id="pursuit-lights"><i class="pl-red"></i><i class="pl-blue"></i></span>
+    <span id="pursuit-text" lang="ja">警察 POLICE PURSUIT</span>
+    <span id="pursuit-sub">OUTRUN IT · WEAVE · OR SHOOT IT OUT</span>
+  </div>
+
   <div id="stamps"></div>
   <div id="hint">&#8592;&#8594; STEER &nbsp;&middot;&nbsp; SHIFT — DRIFT &nbsp;&middot;&nbsp; &#8593; — BOOST &nbsp;&middot;&nbsp; F — FIRE &nbsp;&middot;&nbsp; C — RIDE &nbsp;&middot;&nbsp; RAMP → AIR TRICKS &nbsp;&middot;&nbsp; PRESS <b>?</b> / HOW TO PLAY</div>
 </div>
@@ -74,6 +80,9 @@
     <span class="tc-cap">FIRE</span><span lang="ja">射撃</span>
   </button>
 </div>
+
+<!-- distraction bait: flashing notification cards slide in from the edges -->
+<div id="distract-cards" aria-hidden="true"></div>
 
 <div id="ink-flash"></div>
 <div id="wipe"></div>
@@ -135,6 +144,7 @@
       <div class="row"><span class="lbl">APEX CLEARS</span><span class="leader"></span><span class="val" id="r-apex">0</span></div>
       <div class="row"><span class="lbl">CRATES</span><span class="leader"></span><span class="val" id="r-crate">0</span></div>
       <div class="row"><span class="lbl">BLASTED</span><span class="leader"></span><span class="val" id="r-blast">0</span></div>
+      <div class="row"><span class="lbl">POLICE EVADED</span><span class="leader"></span><span class="val" id="r-chase">0</span></div>
       <div class="row"><span class="lbl">BEST TRICK</span><span class="leader"></span><span class="val" id="r-trick">&times;1.0</span></div>
       <div class="row"><span class="lbl">OVERDRIVE</span><span class="leader"></span><span class="val" id="r-od">0.0 s</span></div>
       <div class="row"><span class="lbl">FEVER TIME</span><span class="leader"></span><span class="val" id="r-fever">0.0 s</span></div>
@@ -208,6 +218,13 @@
           <li><span class="d">When <b>TURN LEFT / RIGHT</b> flashes, steer that way — <b>hold DRIFT through the apex</b> for triple ink.</span></li>
           <li><span class="d">Steer left over the yellow line to <b>switch to the other road</b> — the camera rides across with you. Cars there come <b>head-on</b>; shaving one pays <b>×2 ink</b>, a hit is a crash.</span></li>
           <li><span class="d">Yellow <b>補給 crates</b> hold <b>AMMO</b> or a <b>SHIELD</b> — shoot them or drive through. The shield blocks <b>one</b> crash.</span></li>
+        </ul>
+        <h3 class="air">🚓 警察 POLICE PURSUIT</h3>
+        <ul class="help-list">
+          <li><span class="d">Camp one spot and a <b>patrol car</b> locks on, sirens up, and tries to <b>ram you</b>. Keep moving.</span></li>
+          <li><span class="d"><b>Weave hard</b> — it homes on you with a delay, so a sharp cut shakes its aim. <b>Go flat-out</b> to pull away, or <b>shoot it</b> (<b>撃破 BUSTED</b>).</span></li>
+          <li><span class="d">Survive the tail and it breaks off — <b>まいた TAIL LOST, +1200</b>. Every evade is tallied as <b>POLICE EVADED</b>.</span></li>
+          <li><span class="d">📱🎁 Fake <b>pop-up notifications</b> and roadside <b>billboards</b> will flash to bait your eyes — <b>ignore them</b> and watch the road.</span></li>
         </ul>
       </div>
     </div>

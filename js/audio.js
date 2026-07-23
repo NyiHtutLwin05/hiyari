@@ -549,6 +549,29 @@
       });
     }
 
+    /* Police siren whoop — a fast two-tone wail. Called on spawn and pulsed
+       while a chaser is close. Panned toward the side the patrol car sits on. */
+    siren(pan) {
+      if (!this.ok) return;
+      const ctx = this.ctx, t = ctx.currentTime;
+      const o = ctx.createOscillator();
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(700, t);
+      o.frequency.linearRampToValueAtTime(980, t + 0.18);
+      o.frequency.linearRampToValueAtTime(640, t + 0.42);
+      const bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass'; bp.frequency.value = 1400; bp.Q.value = 3;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.13, t + 0.05);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+      const p = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+      o.connect(bp); bp.connect(g);
+      if (p) { p.pan.value = Math.max(-0.8, Math.min(0.8, pan || 0)); g.connect(p); p.connect(this.master); }
+      else g.connect(this.master);
+      o.start(t); o.stop(t + 0.52);
+    }
+
     /* Corner-ahead call — a panned two-tone "rally note" that rises for a
        right-hander, falls for a left-hander, so you HEAR the turn coming.
        dir: -1 left, +1 right. hard: burns a brighter, longer tone. */

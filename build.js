@@ -31,13 +31,6 @@ const musicSrcs = musicFiles.map(
   (f) => `data:audio/mpeg;base64,${fs.readFileSync(path.join(root, 'audio', f)).toString('base64')}`
 );
 
-// embed the meme sky photos as base64 so they float in the sky offline too
-const memeFiles = ['meme_image/kmh.png', 'meme_image/wla.jpeg'];
-const memeMime = (f) => (f.endsWith('.png') ? 'image/png' : 'image/jpeg');
-const memeSrcs = memeFiles.map(
-  (f) => `data:${memeMime(f)};base64,${fs.readFileSync(path.join(root, f)).toString('base64')}`
-);
-
 // pull the <body> markup out of index.html, dropping the external
 // <link>/<script src> references (everything is inlined below instead)
 let html = read('index.html');
@@ -71,7 +64,6 @@ ${gsap}
 </script>
 <script>
 window.HIYARI_MUSIC_SRCS = ${JSON.stringify(musicSrcs)};
-window.HIYARI_MEME_SRCS = ${JSON.stringify(memeSrcs)};
 </script>
 <script>
 ${audio}

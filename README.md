@@ -22,6 +22,8 @@ Weave through traffic at 200 km/h — every close call is stamped onto the aspha
 - [The two-way road — switch carriageways](#-the-two-way-road--switch-carriageways)
 - [Change your ride — car · bike · bicycle](#-change-your-ride--car--bike--bicycle)
 - [The cannon, supply crates & shield](#-the-cannon-supply-crates--shield)
+- [Police pursuit — outrun the law](#-police-pursuit--outrun-the-law)
+- [Distractions — don't take the bait](#-distractions--dont-take-the-bait)
 - [Stunts (the ramp air-game)](#-stunts--the-air-game)
 - [Sound](#-sound)
 - [Running the game](#-running-the-game)
@@ -49,8 +51,9 @@ The night itself is part of the picture: a **twinkling starfield** over the fog 
 **smearing across the wet asphalt**, and a speed-deepening **vignette** that frames
 the road the faster you go.
 
-> 🌝 **Easter egg:** keep an eye on the sky — a couple of familiar faces drift by up
-> there among the stars. (They're bundled right into the single-file build.)
+And you are not alone out here — camp one spot and a **police cruiser** peels in to hunt
+you down, while fake **pop-ups and billboards** flash at the edges of the screen trying
+to pull your eyes off the road.
 
 ---
 
@@ -110,6 +113,8 @@ fills — when it tops out, you launch. The commit has to be *earned*.
 | **Clean landing** | Land a stunt upright (see below). | Scales with air time & spins |
 | **Crate break** | Shoot or drive through a yellow **補給** supply crate. | `+250` + its drop |
 | **Blast** | Cannon a car clean off the road. | `+150 × combo` |
+| **Tail lost** | Shake a police pursuit — outrun it, weave it off, or survive it. | `+1200` (**まいた**) |
+| **Bust** | Shoot a chasing patrol car out. | `+400 × combo` (**撃破**) |
 
 > ⚡ **Speed feel (v4):** speed changes are now *smoothed asymmetrically* — surges
 > (boost, slingshot, draft) arrive fast, but decay melts away slowly. The old
@@ -197,6 +202,46 @@ New in v4 — an arcade arsenal that never replaces the near-miss economy, only 
 
 ---
 
+## 🚓 Police pursuit — outrun the law
+
+New in **v7** — the road now **fights back**. On a smaller ride you could once park in a
+lane seam and let all the traffic slide by; not anymore. A **警察 patrol car** peels in
+behind you, sirens wailing and roof bar strobing **red-and-blue**, and it will **ram you
+into a crash** if you sit still.
+
+- **It homes on your position — with a delay.** A hard, late **weave** throws its aim
+  off; drifting from lane to lane is how you keep it off your bumper.
+- **Three ways to shake it:**
+  - **Outrun it** — at full speed it can't keep pace and falls back (**まいた TAIL LOST,
+    +1200**).
+  - **Survive it** — every pursuit calls itself off after a while even if you never pull
+    away. Live through it and you bank the same escape bonus.
+  - **Shoot it out** — a cannon round busts the cruiser off the road (**撃破 BUSTED,
+    +400 × combo**).
+- **A hit is a crash** — unless your **SHIELD** is up, which eats it like any other.
+- Grace period before the first one shows, and pursuits space themselves out. Push deep
+  enough (tier ≥ 2) and **two** cruisers can hunt you at once.
+
+> Your run's **POLICE EVADED** count (tails lost + busts) is tallied on the results ledger.
+
+---
+
+## 📵 Distractions — don't take the bait
+
+Also new in **v7** — the game plays dirty with your attention:
+
+- **Pop-up notifications** (`セール 90% OFF`, `YOU WON`, `TAP NOW`…) slide in from the
+  screen edges with a little wiggle and a UI blip, then auto-dismiss — pure bait to make
+  your eyes leave the road.
+- **Roadside billboards** flash and strobe garish ad copy above the traffic, jittering to
+  catch your gaze.
+
+None of them do anything if you **ignore them** — that's the whole game. They're clutter
+designed to break your focus at exactly the wrong moment. (Both respect
+`prefers-reduced-motion`.)
+
+---
+
 ## ✈️ Stunts — the air game
 
 Hit a **ramp** and you launch. While airborne, your normal controls become trick controls:
@@ -280,9 +325,9 @@ hiyari/
 │   ├── fonts.css       # base64-embedded fonts (Anton, Saira, Barlow, Noto Sans JP)
 │   └── style.css       # HUD, poster UI, touch pad, help overlay
 ├── js/
-│   ├── main.js         # state machine, physics, scoring, input, choreography
-│   ├── world.js        # Three.js scene: road, traffic, ramps, decals, corners
-│   └── audio.js        # procedural Web Audio engine, SFX & music-track bus
+│   ├── main.js         # state machine, physics, scoring, input, pursuit AI, choreography
+│   ├── world.js        # Three.js scene: road, traffic, ramps, decals, corners, police, billboards
+│   └── audio.js        # procedural Web Audio engine, SFX (incl. siren) & music-track bus
 ├── audio/              # background music track (embedded into dist on build)
 └── vendor/
     ├── three.min.js

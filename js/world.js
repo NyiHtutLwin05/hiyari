@@ -115,67 +115,93 @@
     W.paintMoon = paintMoon;
     W.bandMat = bandMat;
 
-    /* ---------- meme sky: friends' portraits drift across as an easter egg ----
-       sources are inlined as base64 in the built file (window.HIYARI_MEME_SRCS)
-       and fall back to the meme_image/ folder when running the dev index.html. */
-    const MEME_SRCS = (typeof window !== 'undefined' && window.HIYARI_MEME_SRCS) ||
-      ['meme_image/kmh.png', 'meme_image/wla.jpeg'];
-    const memeLoader = new THREE.TextureLoader();
-    const memes = [];
-    // WebGL refuses to texture a file:// image (opaque origin → tainted), which
-    // would throw at render time. The dist inlines them as data: URIs (always
-    // safe); a raw folder path is only safe when served over http. So skip the
-    // rest — the game just runs without the sky memes on a bare file:// dev open.
-    for (let i = 0; i < MEME_SRCS.length; i++) {
-      const src = MEME_SRCS[i];
-      const safe = src.indexOf('data:') === 0 ||
-        (typeof location === 'undefined' || location.protocol !== 'file:');
-      if (!safe) continue;
-      const mat = new THREE.SpriteMaterial({ fog: false, depthWrite: false, transparent: true, opacity: 0 });
+    /* ---------- distraction billboards: strobing neon ad-panels that drift up
+       in the periphery of the sky to PULL THE EYE OFF THE ROAD. Pure procedural
+       canvas art (no external images → no file:// taint), each one restrobes to
+       a new lurid colour + slogan every time it re-appears. Eye-candy bait. */
+    const DISTRACT_ADS = [
+      { jp: 'セール', en: '90% OFF' },
+      { jp: '当選！', en: 'YOU WON' },
+      { jp: '速報', en: 'LOOK HERE' },
+      { jp: 'クリック', en: 'TAP NOW' },
+      { jp: '限定', en: 'LAST CHANCE' },
+      { jp: '無料', en: 'FREE!!' },
+      { jp: 'ラーメン', en: 'NEXT EXIT' },
+      { jp: '警告', en: 'CLAIM PRIZE' },
+    ];
+    const DISTRACT_HUES = [THEME.shu, THEME.yellow, THEME.blue, 0xE0219A, 0x14C8A0, 0xF25C05];
+    function makeDistractPanel() {
+      const c = makeCanvas(256, 160, () => {});
+      const tex = canvasTexture(c, 1);
+      const mat = new THREE.SpriteMaterial({ map: tex, fog: false, depthWrite: false, transparent: true, opacity: 0 });
       const spr = new THREE.Sprite(mat);
       spr.renderOrder = -1;
       spr.visible = false;
       scene.add(spr);
-      const m = { spr, mat, phase: 'wait', t: 3 + i * 6, baseX: 0, baseY: 70, ar: 0.72 };
-      memeLoader.load(
-        src,
-        (tex) => {
-          if (THREE.SRGBColorSpace) tex.colorSpace = THREE.SRGBColorSpace;
-          mat.map = tex; mat.needsUpdate = true;
-          if (tex.image && tex.image.height) m.ar = tex.image.width / tex.image.height;
-        },
-        undefined,
-        () => { m.phase = 'dead'; spr.visible = false; }   // missing file → stay hidden
-      );
-      memes.push(m);
+      return { spr, mat, tex, canvas: c, phase: 'wait', t: 2 + Math.random() * 6,
+        baseX: 0, baseY: 70, ar: 1.6, hue: THEME.shu, ad: DISTRACT_ADS[0], blink: 0 };
     }
-    // fade a portrait up somewhere in the sky, hold, fade out, then wait — a loop
-    W.updateMemes = function (dt, t) {
-      for (const m of memes) {
-        m.t -= dt;
-        if (m.phase === 'wait') {
-          if (m.t <= 0) {
-            m.baseX = -170 + Math.random() * 340;
-            m.baseY = 62 + Math.random() * 54;
-            const h = 50 + Math.random() * 20;      // bigger, taller portraits
-            m.spr.scale.set(h * m.ar, h, 1);
-            m.spr.position.set(m.baseX, m.baseY, -333);
-            m.spr.visible = true;
-            m.phase = 'in'; m.t = 0.9;
+    function paintDistract(d) {
+      d.hue = DISTRACT_HUES[Math.floor(Math.random() * DISTRACT_HUES.length)];
+      d.ad = DISTRACT_ADS[Math.floor(Math.random() * DISTRACT_ADS.length)];
+      const ctx = d.canvas.getContext('2d');
+      ctx.clearRect(0, 0, 256, 160);
+      ctx.fillStyle = css(d.hue);
+      ctx.fillRect(0, 0, 256, 160);
+      ctx.fillStyle = css(THEME.ink);
+      ctx.fillRect(8, 8, 240, 144);
+      ctx.fillStyle = css(d.hue);
+      ctx.fillRect(16, 16, 224, 128);
+      ctx.fillStyle = css(THEME.ink);
+      ctx.textAlign = 'center';
+      ctx.font = "900 62px 'Noto Sans JP'";
+      ctx.fillText(d.ad.jp, 128, 74);
+      ctx.font = "40px 'Anton'";
+      ctx.fillText(d.ad.en, 128, 122);
+      d.tex.needsUpdate = true;
+    }
+    const distractors = [makeDistractPanel(), makeDistractPanel(), makeDistractPanel()];
+    // enabled by main once the run starts; muted on the intro poster
+    W.distractOn = false;
+    W.updateDistractors = function (dt, t) {
+      for (let i = 0; i < distractors.length; i++) {
+        const d = distractors[i];
+        d.t -= dt;
+        if (d.phase === 'wait') {
+          if (!W.distractOn) { d.t = 1; continue; }
+          if (d.t <= 0) {
+            paintDistract(d);
+            d.baseX = -190 + Math.random() * 380;
+            d.baseY = 58 + Math.random() * 60;
+            const h = 34 + Math.random() * 16;
+            d.spr.scale.set(h * d.ar, h, 1);
+            d.spr.position.set(d.baseX, d.baseY, -330);
+            d.spr.visible = true;
+            d.phase = 'in'; d.t = 0.5;
           }
-        } else if (m.phase === 'in') {
-          m.mat.opacity = Math.min(0.9, m.mat.opacity + dt / 0.9);
-          if (m.t <= 0) { m.phase = 'hold'; m.t = 4 + Math.random() * 3.5; m.mat.opacity = 0.9; }
-        } else if (m.phase === 'hold') {
-          if (m.t <= 0) { m.phase = 'out'; m.t = 0.9; }
-        } else if (m.phase === 'out') {
-          m.mat.opacity = Math.max(0, m.mat.opacity - dt / 0.9);
-          if (m.t <= 0) { m.phase = 'wait'; m.t = 8 + Math.random() * 11; m.spr.visible = false; m.mat.opacity = 0; }
+        } else if (d.phase === 'in') {
+          d.mat.opacity = Math.min(0.92, d.mat.opacity + dt / 0.5);
+          if (d.t <= 0) { d.phase = 'hold'; d.t = 3 + Math.random() * 3; }
+        } else if (d.phase === 'hold') {
+          if (d.t <= 0) { d.phase = 'out'; d.t = 0.5; }
+        } else if (d.phase === 'out') {
+          d.mat.opacity = Math.max(0, d.mat.opacity - dt / 0.5);
+          if (d.t <= 0) { d.phase = 'wait'; d.t = 5 + Math.random() * 9; d.spr.visible = false; d.mat.opacity = 0; }
         }
-        if (m.spr.visible) {
-          m.spr.position.x = m.baseX + Math.sin(t * 0.4 + m.baseY) * 3.5;
-          m.spr.position.y = m.baseY + Math.sin(t * 0.7) * 1.8;
+        if (d.spr.visible) {
+          // strobe the colour + jitter the position so it flags the peripheral eye
+          d.blink += dt * (10 + i * 2.5);
+          const flash = 0.6 + 0.4 * Math.sin(d.blink);
+          d.mat.color.setRGB(flash, flash, flash);
+          d.spr.position.x = d.baseX + Math.sin(t * 0.5 + i) * 5 + Math.sin(t * 9) * 0.8;
+          d.spr.position.y = d.baseY + Math.sin(t * 0.9 + i * 2) * 2.2;
         }
+      }
+    };
+    W.clearDistractors = function () {
+      for (const d of distractors) {
+        d.phase = 'wait'; d.t = 4 + Math.random() * 6;
+        d.spr.visible = false; d.mat.opacity = 0; d.mat.color.setRGB(1, 1, 1);
       }
     };
 
@@ -1319,6 +1345,68 @@
       return g;
     }
     W.buildOncoming = buildOncoming;
+
+    /* ---------- police chaser: hunts you from behind ----------
+       A black-and-white patrol car with a strobing roof light bar. It creeps up
+       in your mirrors and lunges — you shake it by out-running it or juking so
+       its laggy homing overshoots. Returns handles to the two beacons so main
+       can flash them red/blue, and the whole rig so it can be shoved on a bust. */
+    function buildPolice() {
+      const g = new THREE.Group();
+      const whiteMat = new THREE.MeshLambertMaterial({ color: 0xE8E6DE });
+      const blackMat = new THREE.MeshLambertMaterial({ color: 0x15171b });
+      const W_ = 2.15, L_ = 4.7;
+      // lower body black, cabin white — the classic patrol two-tone
+      const body = new THREE.Mesh(new THREE.BoxGeometry(W_, 0.72, L_), blackMat);
+      body.position.y = 0.55;
+      g.add(body);
+      const cab = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.6, 2.2), whiteMat);
+      cab.position.set(0, 1.12, -0.25);
+      g.add(cab);
+      const glass = new THREE.Mesh(new THREE.BoxGeometry(1.94, 0.34, 1.8), glassMat);
+      glass.position.set(0, 1.2, -0.25);
+      g.add(glass);
+      // white doors panel down each flank
+      const doorL = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.5, 2.4), whiteMat);
+      doorL.position.set(W_ / 2, 0.6, 0.1);
+      const doorR = doorL.clone(); doorR.position.x = -W_ / 2;
+      g.add(doorL, doorR);
+      addWheels(g, W_, L_, 0.42);
+      tailBar(g, W_ * 0.86, 0.78, L_ / 2 - 0.02);
+      // headlights + beam
+      const hlMat = new THREE.MeshBasicMaterial({ color: 0xFFF2D0 });
+      for (const x of [-0.72, 0.72]) {
+        const hl = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.12, 0.06), hlMat);
+        hl.position.set(x, 0.5, -L_ / 2 + 0.02);
+        g.add(hl);
+      }
+      // roof light bar: a red beacon (left) and blue beacon (right) + glow sprites
+      const barBase = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.12, 0.4), blackMat);
+      barBase.position.set(0, 1.46, -0.25);
+      g.add(barBase);
+      function beacon(x, hex) {
+        const lamp = new THREE.Mesh(
+          new THREE.BoxGeometry(0.62, 0.2, 0.36),
+          new THREE.MeshBasicMaterial({ color: hex })
+        );
+        lamp.position.set(x, 1.56, -0.25);
+        g.add(lamp);
+        const glow = new THREE.Sprite(new THREE.SpriteMaterial({
+          map: glowTex, color: hex, blending: THREE.AdditiveBlending,
+          depthWrite: false, transparent: true, opacity: 0.9,
+        }));
+        glow.position.set(x, 1.6, -0.25);
+        glow.scale.set(3.4, 3.4, 1);
+        g.add(glow);
+        return { lamp, glow };
+      }
+      const red = beacon(-0.42, THEME.shu);
+      const blue = beacon(0.42, THEME.blue);
+      g.visible = false;
+      scene.add(g);
+      return { group: g, red, blue, halfW: W_ / 2, halfL: L_ / 2 };
+    }
+    W.buildPolice = buildPolice;
 
     /* ---------- shared scroll ---------- */
     W.scroll = function (dz, dt) {

@@ -91,6 +91,23 @@
   const SHIELD_CHANCE = 0.4;    // crate rolls a shield when you don't have one
   const SHIELD_GRACE  = 1.4;    // post-save invulnerability window, seconds
 
+  /* ---------- police chasers: hunt you from behind, punish camping ----------
+     A patrol car creeps up in your mirrors and homes on your x. Sitting still in
+     a lane seam — the bike/bicycle exploit — no longer works: it rams you unless
+     you keep juking or out-run it. Closes when you're slow, drops back when fast. */
+  const CH_START_DELAY  = 14;   // seconds of grace before the first pursuit
+  const CH_GAP_MIN      = 12;   // seconds between pursuits (min)
+  const CH_GAP_RND      = 12;   // + up to this many random seconds
+  const CH_SPAWN_Z      = 26;   // birth distance behind the player (in front of KILL_Z)
+  const CH_HOME_RATE    = 3.4;  // lateral homing responsiveness (laggy → jukeable)
+  const CH_BASE_CLOSE   = 6.5;  // closing speed toward you at zero speedNorm (units/s)
+  const CH_SPEED_FACTOR = 11;   // how hard your speed pushes the patrol back
+  const CH_RAM_Z        = 1.1;  // extra z-overlap slack for the ram hit
+  const CH_ESCAPE_Z     = 33;   // fall this far behind → you've shaken it
+  const CH_DURATION     = 13;   // a pursuit calls itself off after this long (survive it)
+  const CH_ESCAPE_PTS   = 1200; // ink for losing a tail
+  const CH_BUST_PTS     = 400;  // ink for shooting a patrol car out
+
   const fmt = (n) => Math.floor(n).toLocaleString('en-US');
   const store = {
     get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
@@ -172,6 +189,13 @@
   const shards = [];            // crate-shatter debris in flight
   let crateTimer = 9;
 
+  /* v7 systems: police chasers */
+  const chasers = [];           // patrol cars built lazily below
+  let chaserTimer = CH_START_DELAY;
+  let sirenTimer = 0;
+  let chasersBusted = 0, tailsLost = 0;
+  let pursuitShown = false;
+
   player.group.position.set(LANE_X[2], 0, 0);
 
   /* ---------- DOM refs ---------- */
@@ -201,6 +225,8 @@
     ammoPips: $('#ammo-pips'), shieldTag: $('#shield-tag'), vignette: $('#vignette'),
     rCrate: $('#r-crate'), rBlast: $('#r-blast'), rHeadon: $('#r-headon'),
     rSling: $('#r-sling'), rApex: $('#r-apex'), rTrick: $('#r-trick'), rOd: $('#r-od'),
+    // v7 HUD: police pursuit
+    pursuit: $('#pursuit'), rChase: $('#r-chase'), distractCards: $('#distract-cards'),
   };
 
   /* ---------- score odometer ---------- */
@@ -296,6 +322,58 @@
   function inkSlap(op) {
     if (RM) return;
     gsap.fromTo(el.inkFlash, { opacity: op }, { opacity: 0, duration: 0.16, ease: 'power1.out', overwrite: true });
+  }
+
+  /* ---------- distraction cards: flashing notification bait ----------
+     Fake ads / notifications slide in from a screen edge to pull your eyes off
+     the road. Pure decoration — they never touch collision — but a glance at one
+     is a glance away from the traffic. That's the whole point. */
+  const DISTRACT_MSGS = [
+    { emoji: '📱', jp: '新着メッセージ', en: '3 NEW MESSAGES' },
+    { emoji: '🎁', jp: 'おめでとう！', en: 'YOU WON A PRIZE' },
+    { emoji: '🔔', jp: '通知', en: 'TAP TO CLAIM' },
+    { emoji: '❤️', jp: 'いいね', en: 'SOMEONE LIKED YOU' },
+    { emoji: '🍜', jp: 'ラーメン 500m', en: 'NEXT EXIT — EAT NOW' },
+    { emoji: '⚡', jp: '限定セール', en: '90% OFF · ENDS SOON' },
+    { emoji: '📸', jp: 'タグ付けされました', en: 'YOU WERE TAGGED' },
+    { emoji: '🎉', jp: '当選しました', en: 'FREE GIFT!! LOOK' },
+  ];
+  const distractPool = [];
+  if (el.distractCards) {
+    for (let i = 0; i < 4; i++) {
+      const card = document.createElement('div');
+      card.className = 'distract-card';
+      card.innerHTML = '<span class="dc-emoji"></span><span class="dc-text"><b></b><i lang="ja"></i></span>';
+      el.distractCards.appendChild(card);
+      distractPool.push({ el: card, live: false });
+    }
+  }
+  let distractCursor = 0, distractTimer = 8;
+  function spawnDistractCard() {
+    if (!distractPool.length) return;
+    const d = distractPool[distractCursor];
+    distractCursor = (distractCursor + 1) % distractPool.length;
+    if (d.live) return;
+    const msg = DISTRACT_MSGS[Math.floor(Math.random() * DISTRACT_MSGS.length)];
+    d.el.children[0].textContent = msg.emoji;
+    d.el.children[1].children[0].textContent = msg.en;
+    d.el.children[1].children[1].textContent = msg.jp;
+    const right = Math.random() < 0.5;
+    d.el.classList.toggle('right', right);
+    d.el.classList.toggle('left', !right);
+    d.el.style.top = (20 + Math.random() * 48) + 'vh';
+    d.live = true;
+    const from = right ? 130 : -130;
+    gsap.killTweensOf(d.el);
+    const tl = gsap.timeline({ onComplete: () => { d.live = false; d.el.style.opacity = 0; } });
+    tl.set(d.el, { opacity: 1, xPercent: from, rotation: right ? 4 : -4 });
+    tl.to(d.el, { xPercent: 0, rotation: 0, duration: 0.42, ease: 'back.out(1.9)' });
+    if (!RM) tl.to(d.el, { rotation: right ? 2.5 : -2.5, duration: 0.11, yoyo: true, repeat: 5, ease: 'sine.inOut' }, '>');
+    tl.to(d.el, { xPercent: from, opacity: 0, duration: 0.34, ease: 'power2.in' }, '+=' + (2 + Math.random() * 1.6));
+    audio.uiBlip();
+  }
+  function clearDistractCards() {
+    for (const d of distractPool) { gsap.killTweensOf(d.el); d.live = false; d.el.style.opacity = 0; }
   }
 
   /* ---------- sky / tier plates ---------- */
@@ -667,6 +745,9 @@
     curveActive = false;
     cornerApex = 0;
     if (el.turnSignal) { gsap.killTweensOf(el.turnSignal); gsap.set(el.turnSignal, { opacity: 0 }); }
+    if (el.pursuit) { gsap.killTweensOf(el.pursuit); gsap.set(el.pursuit, { opacity: 0 }); }
+    pursuitShown = false;
+    clearDistractCards();
     aura.visible = false;   // a crash means the shield wasn't armed — keep the wreck clean
 
     crashPos.copy(player.group.position);
@@ -731,6 +812,7 @@
     el.rApex.textContent = '0';
     el.rCrate.textContent = '0';
     el.rBlast.textContent = '0';
+    if (el.rChase) el.rChase.textContent = '0';
     el.rTrick.textContent = '×1.0';
     el.rOd.textContent = '0.0 s';
     el.rFever.textContent = '0.0 s';
@@ -769,6 +851,7 @@
       [el.rApex, { v: 0 }, apexClears, (o) => String(Math.round(o.v))],
       [el.rCrate, { v: 0 }, cratesBroken, (o) => String(Math.round(o.v))],
       [el.rBlast, { v: 0 }, carsBlasted, (o) => String(Math.round(o.v))],
+      [el.rChase, { v: 0 }, tailsLost + chasersBusted, (o) => String(Math.round(o.v))],
       [el.rTrick, { v: 0 }, bestTrick / 10, (o) => '×' + o.v.toFixed(1)],
       [el.rOd, { v: 0 }, overdriveTime, (o) => o.v.toFixed(1) + ' s'],
       [el.rFever, { v: 0 }, feverTime, (o) => o.v.toFixed(1) + ' s'],
@@ -869,6 +952,15 @@
     for (const cr of crates) { cr.live = false; cr.group.visible = false; }
     for (const sh of shards) sh.m.visible = false;
     shards.length = 0;
+    // v7: clear any pursuit and reset the distraction sky
+    for (const ch of chasers) releaseChaser(ch);
+    chaserTimer = CH_START_DELAY; sirenTimer = 0;
+    chasersBusted = 0; tailsLost = 0;
+    if (el.pursuit) { gsap.killTweensOf(el.pursuit); el.pursuit.style.opacity = 0; }
+    pursuitShown = false;
+    world.clearDistractors();
+    clearDistractCards();
+    distractTimer = 8;
     syncAmmo();
     el.vignette.style.opacity = 0;
     gsap.killTweensOf(player.group.rotation);
@@ -1144,6 +1236,10 @@
 
   for (let i = 0; i < 4; i++) shots.push({ ...world.buildTracer(), live: false, x: 0, z: 0 });
   for (let i = 0; i < 3; i++) crates.push({ ...world.buildCrate(), live: false, lane: 0, z: 0 });
+  // two patrol cars in the pool (a second joins the hunt on the high tiers)
+  for (let i = 0; i < 2; i++) {
+    chasers.push({ ...world.buildPolice(), live: false, dead: false, x: 0, z: 0, lit: 0, warned: 0 });
+  }
 
   function fire() {
     if (state !== 'run' || paused || helpOpen || airborne || ammo <= 0) return;
@@ -1279,10 +1375,24 @@
         }
       }
       if (spent) continue;
+      let hit = false;
       for (const c of active) {
         if (!c.dead && c.z > s.z - c.halfL && c.z < zPrev + c.halfL &&
             Math.abs(s.x - c.lx) < c.halfW + 0.5) {
           blastCar(c);
+          killShot(s);
+          hit = true;
+          break;
+        }
+      }
+      if (hit) continue;
+      // a tracer can shoot a patrol car out of the pursuit
+      for (const ch of chasers) {
+        if (ch.live && !ch.dead && ch.z > s.z - ch.halfL && ch.z < zPrev + ch.halfL &&
+            Math.abs(s.x - ch.x) < ch.halfW + 0.5) {
+          chasersBusted++;
+          retireChaser(ch, CH_BUST_PTS * combo, '撃破', 'BUSTED', 't3');
+          audio.blastHit();
           killShot(s);
           break;
         }
@@ -1668,6 +1778,19 @@
     crateTimer -= dt;
     if (crateTimer <= 0) { spawnCrate(); crateTimer = 10 + Math.random() * 8; }
 
+    // police pursuit cadence — a second patrol joins the hunt on the high tiers
+    const maxChasers = tier >= 2 ? 2 : 1;
+    const liveChasers = chasers.reduce((n, c) => n + (c.live && !c.dead ? 1 : 0), 0);
+    chaserTimer -= dt;
+    if (chaserTimer <= 0) {
+      if (liveChasers < maxChasers) { spawnChaser(); chaserTimer = CH_GAP_MIN + Math.random() * CH_GAP_RND; }
+      else chaserTimer = 3;   // hunt at capacity — retry shortly
+    }
+
+    // distraction bait slides in on its own rhythm
+    distractTimer -= dt;
+    if (distractTimer <= 0) { spawnDistractCard(); distractTimer = 5 + Math.random() * 6; }
+
     // tier ladder
     for (let i = TIER_AT.length - 1; i > tier; i--) {
       if (baseSpeed >= TIER_AT[i]) { setTier(i); break; }
@@ -1963,6 +2086,135 @@
     onOtherRoad = px < CENTER_X;
   }
 
+  /* ---------- police chasers ---------- */
+  function releaseChaser(ch) {
+    ch.live = false;
+    ch.dead = false;
+    ch.group.visible = false;
+    gsap.killTweensOf(ch.group.rotation);
+    gsap.killTweensOf(ch.group.position);
+    ch.group.rotation.set(0, 0, 0);
+  }
+
+  function showPursuitBanner() {
+    if (!el.pursuit || pursuitShown) return;
+    pursuitShown = true;
+    gsap.killTweensOf(el.pursuit);
+    gsap.fromTo(el.pursuit,
+      { opacity: 0, scale: 1.3, xPercent: -50 },
+      { opacity: 1, scale: 1, xPercent: -50, duration: 0.4, ease: 'back.out(2)' });
+  }
+  function hidePursuitBanner() {
+    if (!el.pursuit || !pursuitShown) return;
+    pursuitShown = false;
+    gsap.killTweensOf(el.pursuit);
+    gsap.to(el.pursuit, { opacity: 0, duration: 0.4, ease: 'power2.in' });
+  }
+
+  function spawnChaser() {
+    const ch = chasers.find((c) => !c.live);
+    if (!ch) return;
+    ch.live = true;
+    ch.dead = false;
+    ch.age = 0;
+    ch.x = player.group.position.x;
+    ch.z = CH_SPAWN_Z + Math.random() * 6;
+    ch.lit = Math.random() * 6;
+    ch.group.rotation.set(0, 0, 0);
+    ch.group.position.set(ch.x, 0, ch.z);
+    ch.group.visible = true;
+    audio.siren(Math.sign(ch.x - player.group.position.x) * 0.4);
+    showPursuitBanner();
+    showStamp(-1, { jp: '警察', word: 'PURSUIT', cls: 't3' }, 0);
+  }
+
+  // a chaser leaves the hunt — shot out, or shaken off. spins it toward the edge.
+  function retireChaser(ch, pts, jp, word, cls) {
+    ch.dead = true;
+    if (pts) score += pts;
+    const side = Math.sign(ch.x - player.group.position.x) || 1;
+    showStamp(side, { jp, word, cls: cls || 't2' }, pts || 0);
+    gsap.killTweensOf(ch.group.rotation);
+    gsap.to(ch.group.rotation, { y: side * 3, duration: 1.0, ease: 'power1.in' });
+    inkSlap(0.1);
+  }
+
+  function updateChasers(dt) {
+    const px = player.group.position.x;
+    let anyClose = false;
+    for (const ch of chasers) {
+      if (!ch.live) continue;
+
+      if (ch.dead) {
+        // wrecked / shaken: drift back off-screen, then recycle
+        ch.z += (40 + speed * 0.3) * dt;
+        ch.group.position.set(ch.x + world.bendX(ch.z), 0, ch.z);
+        if (ch.z > world.KILL_Z + 6) releaseChaser(ch);
+        continue;
+      }
+
+      // strobing light bar — red/blue out of phase
+      ch.lit += dt * 9;
+      const s = Math.sin(ch.lit);
+      ch.red.glow.material.opacity = s > 0 ? 0.95 : 0.14;
+      ch.blue.glow.material.opacity = s > 0 ? 0.14 : 0.95;
+      ch.red.lamp.scale.setScalar(s > 0 ? 1.3 : 0.8);
+      ch.blue.lamp.scale.setScalar(s > 0 ? 0.8 : 1.3);
+
+      ch.age += dt;
+      // laggy lateral homing — juke sideways and it overshoots
+      ch.x += (px - ch.x) * (1 - Math.exp(-CH_HOME_RATE * dt));
+      // closing rate: eats into you when slow, drops back when you're flat-out
+      const approach = CH_BASE_CLOSE - speedNorm * CH_SPEED_FACTOR;
+      ch.z -= approach * dt;
+      ch.group.position.set(ch.x + world.bendX(ch.z), 0, ch.z);
+      ch.group.rotation.y = -(px - ch.x) * 0.05;   // nose tracks toward your lane
+
+      if (ch.z < 20) anyClose = true;
+
+      // shaken off — out-ran it, or it called the chase off after its window
+      if (ch.z > CH_ESCAPE_Z || ch.age > CH_DURATION) {
+        tailsLost++;
+        retireChaser(ch, CH_ESCAPE_PTS, 'まいた', 'TAIL LOST', 't3');
+        world.stampRoad('まいた', px, 2.5, { jp: true, width: 5 });
+        audio.chime();
+        continue;
+      }
+
+      // the ram: it draws level and shunts you (shield eats it once)
+      const halfWsum = ch.halfW + player.halfW;
+      const halfLsum = ch.halfL + player.halfL;
+      if (state === 'run' && !airborne && landGrace <= 0 &&
+          Math.abs(ch.x - px) < halfWsum * 0.9 &&
+          ch.z < halfLsum + CH_RAM_Z && ch.z > -(halfLsum + CH_RAM_Z)) {
+        if (shieldOn) {
+          shieldOn = false;
+          aura.visible = false;
+          syncAmmo();
+          landGrace = SHIELD_GRACE;
+          retireChaser(ch, 0, 'バリア', 'SHIELD SAVED', 't3');
+          audio.shieldSave();
+        } else {
+          crash({ group: ch.group });
+        }
+        return;   // state changed / shield handled — bail this frame
+      }
+    }
+
+    // siren wail while a patrol car is on your bumper
+    if (anyClose) {
+      sirenTimer -= dt;
+      if (sirenTimer <= 0) {
+        sirenTimer = 1.1;
+        const near = chasers.find((c) => c.live && !c.dead && c.z < 20);
+        if (near) audio.siren(Math.sign(near.x - px) * 0.4);
+      }
+    }
+
+    // pull the banner down once no patrol car is actively hunting
+    if (!chasers.some((c) => c.live && !c.dead)) hidePursuitBanner();
+  }
+
   function updateWreck(dt) {
     for (const w of wreckPieces) {
       w.vel.y -= 22 * dt;
@@ -2062,6 +2314,7 @@
       updateRamps(dt);
       updateShots(dt);
       updateCrates(dt);
+      updateChasers(dt);
     } else if (state === 'starting') {
       updatePlayer(dt, raw);
       for (const c of active) {
@@ -2082,7 +2335,8 @@
     if (state !== 'boot' && state !== 'intro') {
       world.scroll(speed * dt, dt);
       updateOncoming(dt);
-      world.updateMemes(raw, clockT);   // real-time drift, independent of hitstop
+      world.distractOn = state === 'run' && !paused && !helpOpen;
+      world.updateDistractors(raw, clockT);   // real-time strobe, independent of hitstop
     }
 
     updateAmbient(raw);
@@ -2137,6 +2391,7 @@
       r.group.visible = true;
     },
     setVehicle: (i) => player.setVehicle(i),
+    spawnChaser: () => { chaserTimer = 0; spawnChaser(); },
     snap: () => ({
       state,
       vehicle: player.vehicleName,
@@ -2172,6 +2427,11 @@
       shieldOn,
       cratesBroken,
       carsBlasted,
+      chasersBusted,
+      tailsLost,
+      chasers: chasers.filter((c) => c.live).map((c) => ({
+        x: Math.round(c.x * 100) / 100, z: Math.round(c.z * 10) / 10, dead: c.dead,
+      })),
       crates: crates.filter((c) => c.live).map((c) => ({ lane: c.lane, z: Math.round(c.z) })),
       cars: active.map((c) => ({
         x: Math.round(c.group.position.x * 100) / 100,
