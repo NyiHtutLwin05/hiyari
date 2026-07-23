@@ -3912,18 +3912,21 @@ window.HIYARI_MUSIC_SRCS = ["data:audio/mpeg;base64,SUQzBAAAAAAAPFRYWFgAAAAPAAAD
   const SHIELD_CHANCE = 0.4;    // crate rolls a shield when you don't have one
   const SHIELD_GRACE  = 1.4;    // post-save invulnerability window, seconds
 
-  /* ---------- police chasers: hunt you from behind, punish camping ----------
-     A patrol car creeps up in your mirrors and homes on your x. Sitting still in
-     a lane seam — the bike/bicycle exploit — no longer works: it rams you unless
-     you keep juking or out-run it. Closes when you're slow, drops back when fast. */
+  /* ---------- police chasers: menace from your mirror, lunge to shunt ----------
+     A patrol car creeps up and PACES you just off your bumper — strobe + siren,
+     but it can NOT ram while merely shadowing you. Every couple seconds it locks
+     its aim, flares its lights (a clear tell), then darts forward to shunt you —
+     only that committed lunge can crash you, and a sideways juke during the tell
+     makes it whiff. Punishes camping without ever being an instant, undodgeable
+     wall. Closes when you're slow, drops back (and you shake it) when you're fast. */
   const CH_START_DELAY  = 14;   // seconds of grace before the first pursuit
   const CH_GAP_MIN      = 12;   // seconds between pursuits (min)
   const CH_GAP_RND      = 12;   // + up to this many random seconds
   const CH_SPAWN_Z      = 26;   // birth distance behind the player (in front of KILL_Z)
-  const CH_HOME_RATE    = 3.4;  // lateral homing responsiveness (laggy → jukeable)
+  const CH_HOME_RATE    = 3.4;  // lateral homing responsiveness while closing in
   const CH_BASE_CLOSE   = 6.5;  // closing speed toward you at zero speedNorm (units/s)
   const CH_SPEED_FACTOR = 11;   // how hard your speed pushes the patrol back
-  const CH_RAM_Z        = 1.1;  // extra z-overlap slack for the ram hit
+  const CH_RAM_Z        = 1.1;  // extra z-overlap slack for the lunge hit
   const CH_ESCAPE_Z     = 33;   // fall this far behind → you've shaken it
   const CH_DURATION     = 13;   // a pursuit calls itself off after this long (survive it)
   const CH_ESCAPE_PTS   = 1200; // ink for losing a tail
@@ -3933,6 +3936,14 @@ window.HIYARI_MUSIC_SRCS = ["data:audio/mpeg;base64,SUQzBAAAAAAAPFRYWFgAAAAPAAAD
   const CH_WARN_HOME    = 0.25; // homing multiplier during the warn window (near-frozen → dodgeable)
   const CH_WARN_CLOSE   = 0.45; // closing multiplier during the warn window (hangs back, telegraphed)
   const CH_WARN_SEE_Z   = 9;    // above this z it's still behind the camera → keep the edge warning up
+  // --- pace-and-lunge cadence: the ONLY thing that rams is a committed lunge ---
+  const CH_HOLD_Z       = 4.4;  // pace point — shadows you just off your bumper here
+  const CH_HOLD_HOME    = 2.2;  // gentle lateral homing while pacing (leaves juke room)
+  const CH_LUNGE_GAP    = 2.0;  // seconds pacing before it winds up the next lunge
+  const CH_LUNGE_GAP_RND= 1.4;  // + up to this random, so the timing never reads as metronome
+  const CH_LUNGE_TELE   = 0.55; // tell window: aim LOCKS + lights flare → juke NOW to dodge
+  const CH_LUNGE_SPEED  = 24;   // forward dart speed once it commits (fast → brief overlap)
+  const CH_LUNGE_TIME   = 0.6;  // how long the committed dart lasts before it peels off
 
   const fmt = (n) => Math.floor(n).toLocaleString('en-US');
   const store = {
@@ -5969,6 +5980,10 @@ window.HIYARI_MUSIC_SRCS = ["data:audio/mpeg;base64,SUQzBAAAAAAAPFRYWFgAAAAPAAAD
     ch.x = player.group.position.x + ch.side * CH_SPAWN_OFF;
     ch.z = CH_SPAWN_Z + Math.random() * 6;
     ch.lit = Math.random() * 6;
+    ch.mode = 'close';   // close → hold (pace) → lunge (the only rammer) → close …
+    ch.lungeT = 0;       // countdown to the next lunge while pacing
+    ch.locked = false;   // true during the tell: aim frozen at ch.aimX, lights flaring
+    ch.aimX = ch.x;      // the x the lunge is committed to (stale if you juke away)
     ch.group.rotation.set(0, 0, 0);
     ch.group.position.set(ch.x, 0, ch.z);
     ch.group.visible = true;
@@ -6009,22 +6024,13 @@ window.HIYARI_MUSIC_SRCS = ["data:audio/mpeg;base64,SUQzBAAAAAAAPFRYWFgAAAAPAAAD
       ch.blue.glow.material.opacity = s > 0 ? 0.14 : 0.95;
       ch.red.lamp.scale.setScalar(s > 0 ? 1.3 : 0.8);
       ch.blue.lamp.scale.setScalar(s > 0 ? 0.8 : 1.3);
+      if (ch.locked) {   // the tell: both beacons flare hot and steady — a lunge is coming
+        ch.red.glow.material.opacity = 1; ch.blue.glow.material.opacity = 1;
+        ch.red.lamp.scale.setScalar(1.55); ch.blue.lamp.scale.setScalar(1.55);
+      }
 
       ch.age += dt;
-      // warn window: it hangs back off your quarter and barely tracks, so the player
-      // has a real beat to read the side and weave away before it commits to the ram
       const warning = ch.age < CH_WARN_TIME;
-      const homeRate = CH_HOME_RATE * (warning ? CH_WARN_HOME : 1);
-      // laggy lateral homing — juke sideways and it overshoots
-      ch.x += (px - ch.x) * (1 - Math.exp(-homeRate * dt));
-      // closing rate: eats into you when slow, drops back when you're flat-out
-      let approach = CH_BASE_CLOSE - speedNorm * CH_SPEED_FACTOR;
-      if (warning) approach *= CH_WARN_CLOSE;
-      ch.z -= approach * dt;
-      ch.group.position.set(ch.x + world.bendX(ch.z), 0, ch.z);
-      ch.group.rotation.y = -(px - ch.x) * 0.05;   // nose tracks toward your lane
-
-      if (ch.z < 20) anyClose = true;
 
       // shaken off — out-ran it, or it called the chase off after its window
       if (ch.z > CH_ESCAPE_Z || ch.age > CH_DURATION) {
@@ -6035,10 +6041,54 @@ window.HIYARI_MUSIC_SRCS = ["data:audio/mpeg;base64,SUQzBAAAAAAAPFRYWFgAAAAPAAAD
         continue;
       }
 
-      // the ram: it draws level and shunts you (shield eats it once)
+      if (ch.mode === 'lunge') {
+        // committed dart: aim FROZEN at ch.aimX (juke earlier already decided this),
+        // drives hard toward your bumper line and brief-overlaps — the only rammer
+        ch.z -= CH_LUNGE_SPEED * dt;
+        ch.x += (ch.aimX - ch.x) * (1 - Math.exp(-CH_HOLD_HOME * dt));
+        ch.lungeT -= dt;
+        if (ch.lungeT <= 0 || ch.z < -(player.halfL + player.halfW)) {
+          ch.mode = 'close'; ch.locked = false;   // whiffed / spent — re-establish the pace
+        }
+      } else {
+        // closing / pacing: home on your x, ease to the pace point, NEVER rams.
+        // during the tell the aim is locked to ch.aimX so a juke actually breaks it.
+        const aim = ch.locked ? ch.aimX : px;
+        const homeRate = warning ? CH_HOME_RATE * CH_WARN_HOME
+                       : ch.locked ? 0.0
+                       : ch.mode === 'hold' ? CH_HOLD_HOME : CH_HOME_RATE;
+        ch.x += (aim - ch.x) * (1 - Math.exp(-homeRate * dt));
+
+        // z: close toward the pace point, then settle and shadow you there
+        let approach = CH_BASE_CLOSE - speedNorm * CH_SPEED_FACTOR;
+        if (warning) approach *= CH_WARN_CLOSE;
+        if (ch.z - approach * dt <= CH_HOLD_Z) {
+          ch.z += (CH_HOLD_Z - ch.z) * (1 - Math.exp(-6 * dt));   // ease onto the pace point
+          if (ch.mode !== 'hold') { ch.mode = 'hold'; ch.lungeT = CH_LUNGE_GAP + Math.random() * CH_LUNGE_GAP_RND; }
+        } else {
+          ch.z -= approach * dt;
+        }
+
+        // pacing on your bumper → wind up a lunge. tell first (aim locks + flare),
+        // then commit. only fires when it's genuinely behind you, not mid-whiff.
+        if (ch.mode === 'hold' && !warning && ch.z > CH_HOLD_Z - 1.2) {
+          ch.lungeT -= dt;
+          if (!ch.locked && ch.lungeT <= CH_LUNGE_TELE) {
+            ch.locked = true; ch.aimX = px;                       // LOCK — juke now to dodge
+            audio.siren(Math.sign(ch.x - px) * 0.4 || 0.4);
+          }
+          if (ch.lungeT <= 0) { ch.mode = 'lunge'; ch.locked = false; ch.lungeT = CH_LUNGE_TIME; }
+        }
+      }
+
+      ch.group.position.set(ch.x + world.bendX(ch.z), 0, ch.z);
+      ch.group.rotation.y = -(px - ch.x) * 0.05;   // nose tracks toward your lane
+      if (ch.z < 20) anyClose = true;
+
+      // the shunt: ONLY a committed lunge connects (shield eats it once)
       const halfWsum = ch.halfW + player.halfW;
       const halfLsum = ch.halfL + player.halfL;
-      if (state === 'run' && !airborne && landGrace <= 0 &&
+      if (ch.mode === 'lunge' && state === 'run' && !airborne && landGrace <= 0 &&
           Math.abs(ch.x - px) < halfWsum * 0.9 &&
           ch.z < halfLsum + CH_RAM_Z && ch.z > -(halfLsum + CH_RAM_Z)) {
         if (shieldOn) {
