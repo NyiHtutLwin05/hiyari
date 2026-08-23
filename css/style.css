@@ -18,6 +18,26 @@
   --f-jp:      'Noto Sans JP', sans-serif;
 
   --m: 4vmin;            /* poster margin */
+
+  /* the viewport is `viewport-fit=cover`, so the notch, the rounded corners and
+     the home bar all sit INSIDE it. Every fixed HUD anchor uses the --m? pair
+     below instead of raw --m, so nothing lands under a system chrome cut-out. */
+  --sa-t: env(safe-area-inset-top, 0px);
+  --sa-r: env(safe-area-inset-right, 0px);
+  --sa-b: env(safe-area-inset-bottom, 0px);
+  --sa-l: env(safe-area-inset-left, 0px);
+  --mt: calc(var(--m) + var(--sa-t));
+  --mr: calc(var(--m) + var(--sa-r));
+  --mb: calc(var(--m) + var(--sa-b));
+  --ml: calc(var(--m) + var(--sa-l));
+
+  /* touch control dial sizes — resolved here so the HUD can reserve room above
+     them by name instead of by hard-coded pixel guesses that drift out of sync */
+  --dial-steer: 68px;
+  --dial-boost: 68px;
+  --dial-drift: 60px;
+  --dial-fire:  54px;
+  --dial-gap:   12px;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -67,8 +87,8 @@ button {
 /* --- score, top-left --- */
 #score-block {
   position: absolute;
-  top: var(--m);
-  left: var(--m);
+  top: var(--mt);
+  left: var(--ml);
 }
 #score-digits {
   display: flex;
@@ -103,8 +123,8 @@ button {
 /* --- speed plate, top-right --- */
 #speed-block {
   position: absolute;
-  top: var(--m);
-  right: var(--m);
+  top: var(--mt);
+  right: var(--mr);
   text-align: right;
   perspective: 500px;
 }
@@ -194,8 +214,8 @@ button {
 /* live drift ink counter, appears only mid-slide */
 #drift-live {
   position: absolute;
-  left: var(--m);
-  bottom: calc(var(--m) + 118px);
+  left: var(--ml);
+  bottom: calc(var(--mb) + 118px);
   font-family: var(--f-jp);
   font-weight: 900;
   font-size: clamp(15px, 2vw, 22px);
@@ -212,8 +232,8 @@ button {
 /* live apex ink, appears only mid-corner-drift (sits above drift-live) */
 #apex-live {
   position: absolute;
-  left: var(--m);
-  bottom: calc(var(--m) + 150px);
+  left: var(--ml);
+  bottom: calc(var(--mb) + 150px);
   font-family: var(--f-jp);
   font-weight: 900;
   font-size: clamp(15px, 2vw, 22px);
@@ -248,8 +268,8 @@ button {
 /* --- combo stack, bottom-left --- */
 #combo-stack {
   position: absolute;
-  left: var(--m);
-  bottom: calc(var(--m) + 34px);
+  left: var(--ml);
+  bottom: calc(var(--mb) + 34px);
   display: flex;
   flex-direction: column-reverse;
   gap: 4px;
@@ -264,8 +284,8 @@ button {
 
 #fever-band {
   position: absolute;
-  left: var(--m);
-  bottom: var(--m);
+  left: var(--ml);
+  bottom: var(--mb);
   background: var(--shu);
   color: var(--paper);
   font-family: var(--f-display);
@@ -287,8 +307,8 @@ button {
   opacity: 0;
   will-change: transform, opacity;
 }
-.stamp.left  { left: var(--m);  text-align: left; }
-.stamp.right { right: var(--m); text-align: right; }
+.stamp.left  { left: var(--ml);  text-align: left; }
+.stamp.right { right: var(--mr); text-align: right; }
 .stamp .s-jp {
   font-family: var(--f-jp);
   font-weight: 900;
@@ -314,7 +334,9 @@ button {
 /* --- controls hint --- */
 #hint {
   position: absolute;
-  bottom: var(--m);
+  /* sits one row ABOVE the settings chips — centred text and a right-anchored
+     button row were both reaching for the same strip of screen */
+  bottom: calc(var(--mb) + 42px);
   left: 50%;
   transform: translateX(-50%);
   font-size: 12px;
@@ -403,7 +425,7 @@ button {
 }
 #title {
   position: absolute;
-  left: var(--m);
+  left: var(--ml);
   bottom: 0;
   font-family: var(--f-display);
   font-weight: 400;
@@ -432,7 +454,7 @@ button {
 /* vermilion ink flood while holding to drive */
 #title-fill {
   position: absolute;
-  left: var(--m);
+  left: var(--ml);
   bottom: 0;
   font-family: var(--f-display);
   font-size: min(23vw, 34vh);
@@ -447,7 +469,7 @@ button {
 #spine {
   position: absolute;
   top: 6%;
-  right: calc(var(--m) * 0.75);
+  right: calc(var(--mr) * 0.75);
   writing-mode: vertical-rl;
   font-family: var(--f-jp);
   font-weight: 900;
@@ -459,7 +481,7 @@ button {
 #roundel {
   position: absolute;
   top: 7%;
-  left: var(--m);
+  left: var(--ml);
   width: clamp(88px, 12vw, 132px);
   height: auto;
   transform: rotate(-8deg);
@@ -491,7 +513,7 @@ button {
 #colophon {
   position: absolute;
   inset: 0;
-  padding: calc(var(--m) * 0.9) var(--m);
+  padding: calc(var(--m) * 0.9) var(--mr) var(--mb) var(--ml);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -579,7 +601,7 @@ button {
   height: 100%;
   background: var(--green);
   border-left: 3px solid var(--paper);
-  padding: calc(var(--m) * 1.2) calc(var(--m) * 1.1);
+  padding: calc(var(--m) * 1.2 + var(--sa-t)) calc(var(--m) * 1.1) calc(var(--mb) + 6px);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -717,21 +739,38 @@ button {
 
 #audio-btns {
   position: fixed;
-  right: var(--m);
-  bottom: var(--m);
+  right: var(--mr);
+  bottom: var(--mb);
   z-index: 50;   /* below the results poster so it never collides with RUN IT BACK */
   display: flex;
   gap: 8px;
+  align-items: stretch;
 }
-#mute-btn, #music-btn {
+/* every chip carries both labels; only one is ever rendered (see the coarse
+   block below, which swaps to the short glyph on touch) */
+.ab-s { display: none; }
+#pause-btn { display: none; }   /* touch-only — desktop has the P key */
+/* the intro poster is z-70 and opaque, so the chips have to climb over it or a
+   first-time player can never open HOW TO PLAY before their first run */
+body.intro #audio-btns { z-index: 76; }
+body.intro #vehicle-btn, body.intro #pause-btn { display: none; }
+body.scored #audio-btns { display: none; }   /* the results poster owns the screen */
+#mute-btn, #music-btn, #vehicle-btn {
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.24em;
+  white-space: nowrap;
   color: color-mix(in srgb, var(--paper) 62%, transparent);
   border: 1px solid color-mix(in srgb, var(--paper) 35%, transparent);
   padding: 8px 12px 7px;
   transition: color 0.15s ease, border-color 0.15s ease;
 }
+/* the ride swap is a GAME action, not a setting — it reads in caution yellow */
+#vehicle-btn {
+  color: var(--yellow);
+  border-color: color-mix(in srgb, var(--yellow) 55%, transparent);
+}
+#vehicle-btn:hover { color: var(--yellow); border-color: var(--yellow); }
 #mute-btn:hover, #music-btn:hover { color: var(--paper); border-color: var(--paper); }
 #music-btn.muted {
   color: color-mix(in srgb, var(--paper) 35%, transparent);
@@ -745,15 +784,13 @@ button {
   text-decoration: line-through;
 }
 
-/* on-screen boost trigger — coarse pointers only */
+/* on-screen boost trigger — coarse pointers only. Its geometry lives with the
+   rest of the thumb pad in the (pointer: coarse) block further down, so the
+   whole cluster is laid out from one set of numbers and can't drift apart. */
 #boost-btn {
   display: none;
   position: fixed;
-  right: var(--m);
-  bottom: calc(var(--m) + 52px);
   z-index: 45;
-  width: 72px;
-  height: 72px;
   border-radius: 50%;
   border: 3px solid var(--shu);
   background: color-mix(in srgb, var(--ink) 70%, transparent);
@@ -767,9 +804,6 @@ button {
   user-select: none;
 }
 #boost-btn:active { background: var(--shu); color: var(--paper); }
-@media (pointer: coarse) {
-  body.playing #boost-btn { display: block; }
-}
 
 /* ============ ammo pips + shield tag (in #speed-block) ============ */
 #ammo-block { margin-top: 7px; }
@@ -964,10 +998,149 @@ button {
   .pl-red, .pl-blue { animation: none; opacity: 1; }
 }
 
+/* ============ keep-clear banner (riding the un-laned middle) ============ */
+#keep-clear {
+  position: absolute;
+  top: 34%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 12;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 7px 16px 6px;
+  background: var(--yellow);
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  will-change: opacity;
+}
+.kc-jp {
+  font-family: var(--f-jp);
+  font-weight: 900;
+  font-size: clamp(15px, 2.6vw, 24px);
+  letter-spacing: 0.12em;
+  line-height: 1;
+}
+.kc-en {
+  font-family: var(--f-display);
+  font-size: clamp(9px, 1.3vw, 13px);
+  letter-spacing: 0.14em;
+  line-height: 1;
+}
+
+/* ============ narrow viewports (typography + poster scaling) ============
+   Layout for TOUCH devices lives in the (pointer: coarse) block below, which
+   comes later in the file and therefore wins — this block only handles "the
+   screen is narrow", which is also true of a small desktop window. */
+
+@media (max-width: 720px) {
+  :root { --m: 5vmin; }
+  #title, #title-fill { font-size: min(30vw, 24vh); bottom: 2vh; }
+  #score-digits { font-size: clamp(38px, 11vw, 74px); }
+  #score-label { font-size: 10px; letter-spacing: 0.24em; }
+  #score-rule { height: 2px; margin-top: 4px; }
+  #speed-num { font-size: clamp(24px, 7vw, 40px); }
+  #hint { display: none; }
+  #air-trick { top: 26%; font-size: clamp(20px, 6vw, 40px); }
+  #overdrive-tag { font-size: 9px; letter-spacing: 0.12em; }
+  #results { width: 100vw; }
+  #results-card { border-left: none; border-top: 3px solid var(--paper); }
+  #restart-hint { display: none; }
+  /* the 15-row ledger is taller than a phone, so RUN IT BACK used to sit below
+     the fold with no visible scroll cue — compact the rows AND pin the button */
+  .ledger .row { margin: 8px 0; }
+  .ledger .lbl { font-size: 11px; letter-spacing: 0.16em; }
+  .ledger .val { font-size: 17px; }
+  #results header { padding-bottom: 8px; margin-bottom: 12px; }
+  #score-final-rule { margin: 14px 0 8px; }
+  #r-score { font-size: clamp(48px, 15vw, 88px); }
+  #restart-btn {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    margin-top: 14px;
+    padding: 14px 18px 12px;
+    box-shadow: 0 -14px 18px 10px var(--green), 0 0 0 3px var(--paper);
+  }
+  #roundel { display: none; }
+  #credit { display: none; }   /* the colophon needs the room for the chips */
+  #combo-stack {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    bottom: calc(var(--mb) + 56px);
+    width: min(60vw, 320px);
+  }
+  #fever-band { left: 50%; right: auto; transform: translateX(-50%) scaleX(0); transform-origin: center; }
+  /* four full-width caps chips cannot share one row on a phone — let them wrap
+     inside the margins instead of overflowing the viewport (they used to run
+     clean off the left edge and land on top of the steering buttons) */
+  #audio-btns {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    max-width: calc(100vw - var(--ml) - var(--mr));
+  }
+}
+
+/* ============ short viewports (landscape phones): the results ledger ============
+   15 rows down one column is taller than a landscape phone, which left RUN IT
+   BACK below the fold with no scroll cue. Two columns + a pinned button fit the
+   whole poster on ~390px of height. */
+@media (max-height: 560px) {
+  #results { width: min(580px, 100vw); }
+  /* only the LEDGER scrolls — the score and RUN IT BACK are the two things a
+     player actually needs, so they stay pinned in view at any height */
+  #results-card { padding: 12px 16px calc(var(--mb) + 6px); overflow: hidden; }
+  .ledger {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  #results header { padding-bottom: 6px; margin-bottom: 8px; }
+  #results-kicker { font-size: 20px; }
+  #results-jp { font-size: 12px; }
+  .ledger { display: grid; grid-template-columns: 1fr 1fr; column-gap: 18px; }
+  .ledger .row { margin: 4px 0; gap: 7px; }
+  .ledger .lbl { font-size: 10px; letter-spacing: 0.1em; }
+  .ledger .val { font-size: 14px; }
+  #score-final-rule { height: 3px; margin: 8px 0 4px; }
+  #r-score-label { font-size: 10px; letter-spacing: 0.24em; }
+  #r-score { font-size: 36px; line-height: 1; }
+  #new-record { font-size: 13px; padding: 3px 8px 2px; margin-top: 4px; }
+  #restart-btn {
+    flex: 0 0 auto;
+    margin-top: 8px;
+    padding: 10px 14px 8px;
+    font-size: 17px;
+  }
+  #restart-hint { display: none; }
+}
+
 /* ============ touch control pad (coarse pointers only) ============ */
+/* One layout, two thumbs, zero overlaps. Everything is sized off the --dial-*
+   tokens and stacked with calc() from the safe-area anchors, so the clusters
+   scale down together on a small phone instead of piling on top of each other
+   (the old pad hard-coded 74/84/66px and put FIRE over the steer pair — on a
+   375px screen the settings row landed straight on top of both). */
 #touch-controls { display: none; }
 @media (pointer: coarse) {
+  :root {
+    --dial-steer: clamp(56px, 15.5vw, 74px);
+    --dial-boost: clamp(56px, 15.5vw, 74px);
+    --dial-drift: clamp(50px, 13.5vw, 66px);
+    --dial-fire:  clamp(44px, 12vw, 58px);
+    --dial-gap:   clamp(8px, 2.6vw, 14px);
+    /* how tall the thumb pad is — the HUD keeps its live counters above this */
+    --pad-h: calc(var(--mb) + var(--dial-boost) + var(--dial-gap) + var(--dial-fire));
+  }
+
   body.playing #touch-controls { display: block; }   /* only while driving */
+  body.playing #boost-btn { display: block; }
   #touch-controls {
     position: fixed;
     inset: 0;
@@ -976,10 +1149,10 @@ button {
   }
   #tc-steer {
     position: fixed;
-    left: var(--m);
-    bottom: var(--m);
+    left: var(--ml);
+    bottom: var(--mb);
     display: flex;
-    gap: 14px;
+    gap: var(--dial-gap);
     pointer-events: none;
   }
   .tc-btn {
@@ -996,19 +1169,29 @@ button {
     border: 3px solid color-mix(in srgb, var(--paper) 80%, transparent);
   }
   #btn-left, #btn-right {
-    width: 74px;
-    height: 74px;
+    width: var(--dial-steer);
+    height: var(--dial-steer);
     border-radius: 50%;
-    font-size: 30px;
+    font-size: calc(var(--dial-steer) * 0.42);
     line-height: 1;
   }
   #btn-left:active, #btn-right:active { background: var(--paper); color: var(--ink); }
+
+  /* right thumb: 加速 anchored in the corner, DRIFT beside it, FIRE above it —
+     an L, so no two dials ever share a pixel however narrow the screen gets */
+  #boost-btn {
+    right: var(--mr);
+    bottom: var(--mb);
+    width: var(--dial-boost);
+    height: var(--dial-boost);
+    font-size: calc(var(--dial-boost) * 0.28);
+  }
   #btn-drift {
     position: fixed;
-    right: var(--m);
-    bottom: calc(var(--m) + 134px);   /* stacked above the 加速 boost dial */
-    width: 84px;
-    height: 84px;
+    right: calc(var(--mr) + var(--dial-boost) + var(--dial-gap));
+    bottom: var(--mb);
+    width: var(--dial-drift);
+    height: var(--dial-drift);
     border-radius: 50%;
     border-color: var(--yellow);
     color: var(--yellow);
@@ -1016,15 +1199,16 @@ button {
     letter-spacing: 0.04em;
     transform: rotate(6deg);
   }
-  #btn-drift .tc-cap { font-size: 17px; }
-  #btn-drift [lang="ja"] { font-family: var(--f-jp); font-size: 9px; font-weight: 700; }
+  #btn-drift .tc-cap { font-size: calc(var(--dial-drift) * 0.25); line-height: 1.05; }
+  #btn-drift [lang="ja"] { font-family: var(--f-jp); font-size: calc(var(--dial-drift) * 0.145); font-weight: 700; }
   #btn-drift:active { background: var(--yellow); color: var(--ink); }
   #btn-fire {
     position: fixed;
-    left: calc(var(--m) + 30px);
-    bottom: calc(var(--m) + 92px);   /* stacked above the steer pair */
-    width: 66px;
-    height: 66px;
+    right: var(--mr);
+    bottom: calc(var(--mb) + var(--dial-boost) + var(--dial-gap));
+    left: auto;
+    width: var(--dial-fire);
+    height: var(--dial-fire);
     border-radius: 50%;
     border-color: var(--shu);
     color: var(--paper);
@@ -1032,12 +1216,131 @@ button {
     letter-spacing: 0.04em;
     transform: rotate(-6deg);
   }
-  #btn-fire .tc-cap { font-size: 15px; }
-  #btn-fire [lang="ja"] { font-family: var(--f-jp); font-size: 9px; font-weight: 700; }
+  #btn-fire .tc-cap { font-size: calc(var(--dial-fire) * 0.26); line-height: 1.05; }
+  #btn-fire [lang="ja"] { font-family: var(--f-jp); font-size: calc(var(--dial-fire) * 0.16); font-weight: 700; }
   #btn-fire:active { background: var(--shu); color: var(--paper); }
-  /* lift the live drift/apex counters clear of the FIRE button's footprint */
-  #drift-live { bottom: calc(var(--m) + 172px); }
-  #apex-live  { bottom: calc(var(--m) + 204px); }
+
+  /* --- HUD out of the thumbs' way --------------------------------------- */
+  /* the live counters ride above the left steer pair, not through it */
+  #drift-live { bottom: calc(var(--mb) + var(--dial-steer) + 14px); }
+  #apex-live  { bottom: calc(var(--mb) + var(--dial-steer) + 42px); }
+  /* combo + fever move to the free channel BETWEEN the two thumb clusters */
+  #combo-stack {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    bottom: calc(var(--pad-h) + 40px);
+    width: min(56vw, 300px);
+  }
+  #fever-band {
+    left: 50%;
+    right: auto;
+    bottom: calc(var(--pad-h) + 8px);
+    transform: translateX(-50%) scaleX(0);
+    transform-origin: center;
+  }
+  #hint { display: none; }   /* it lists keyboard keys — meaningless here */
+
+  /* the top-right stack was three lines of keyboard prompts stretched across
+     half the screen. On touch the gauge and the pips ARE the readout: the
+     buttons that drive them are right there on screen. */
+  #route-ticker, #boost-label, #ammo-label { display: none; }
+  #boost-block { margin-top: 8px; }
+  #boost-gauge { width: min(30vw, 150px); height: 6px; }
+  #ammo-block { margin-top: 6px; }
+  #ammo-pips .pip { width: 7px; height: 12px; }
+  #speed-plate { padding: 7px 11px 6px; gap: 5px; }
+  /* the score has to leave a lane for the chip row that now sits top-centre */
+  #score-digits { font-size: clamp(30px, 9.5vw, 62px); }
+  #score-label { font-size: 9px; letter-spacing: 0.2em; margin-top: 4px; }
+  #speed-unit { font-size: 10px; }
+  #shield-tag { font-size: 10px; margin-top: 5px; }
+  #overdrive-tag { top: calc(100% + 4px); }
+
+  /* banners: keep them off the score / speed plates and let them wrap */
+  #pursuit { top: calc(var(--mt) + 16vh); white-space: normal; max-width: 84vw; }
+  #pursuit-sub { display: none; }
+  #turn-signal { top: calc(var(--mt) + 24vh); }
+  #keep-clear { top: calc(var(--mt) + 30vh); }
+  .distract-card { max-width: 56vw; }
+
+  /* --- settings chips ---------------------------------------------------- */
+  /* Long labels become single glyphs, and while driving only the RIDE chip
+     stays out (it is a gameplay action); MUSIC / SOUND / HOW TO PLAY move to
+     the pause + intro screens where there is room and no traffic incoming. */
+  .ab-l { display: none; }
+  .ab-s { display: inline; }
+  #audio-btns {
+    right: auto;
+    left: 50%;
+    bottom: auto;
+    top: var(--mt);
+    transform: translateX(-50%);
+    z-index: 66;              /* readable over the pause veil (z 65) */
+    gap: 5px;
+    flex-wrap: nowrap;
+    max-width: calc(100vw - var(--ml) - var(--mr));
+  }
+  #mute-btn, #music-btn, #vehicle-btn, #help-btn, #pause-btn {
+    min-width: 36px;
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 10px;
+    font-size: 14px;
+    letter-spacing: 0;
+  }
+  #vehicle-btn .ab-s, #mute-btn .ab-s { font-family: var(--f-jp); font-weight: 700; font-size: 13px; }
+  #pause-btn {
+    color: color-mix(in srgb, var(--paper) 62%, transparent);
+    border: 1px solid color-mix(in srgb, var(--paper) 35%, transparent);
+    letter-spacing: 0.1em;
+  }
+  /* the chips float over the green intro poster, the night road and the pause
+     veil in turn — an ink plate behind each one keeps them legible on all three */
+  #mute-btn, #music-btn, #vehicle-btn, #pause-btn {
+    background: color-mix(in srgb, var(--ink) 66%, transparent);
+  }
+  /* paused: four chips no longer fit beside the score, and there is a whole
+     screen free — drop them under the 中断 card where they read as a menu */
+  body.paused #audio-btns { top: 62%; gap: 8px; }
+  body.paused #mute-btn,
+  body.paused #music-btn,
+  body.paused #vehicle-btn,
+  body.paused #help-btn { min-width: 48px; min-height: 44px; font-size: 16px; }
+  /* driving: RIDE + PAUSE only — everything else waits for the pause screen,
+     where there is room for it and nothing is coming at you. */
+  body.playing #pause-btn { display: flex; }
+  body.playing #music-btn,
+  body.playing #mute-btn,
+  body.playing #help-btn { display: none; }
+  body.paused #music-btn,
+  body.paused #mute-btn,
+  body.paused #help-btn { display: flex; }
+  body.paused #pause-btn { display: none; }   /* tap the veil to resume */
+}
+
+/* landscape phones: ~390px of height total. Shrink the poster margin and the
+   dials, and pull the banners up so they clear the plates without stacking. */
+@media (pointer: coarse) and (max-height: 460px) {
+  :root {
+    --m: 2.4vmin;
+    --dial-steer: clamp(48px, 11vh, 62px);
+    --dial-boost: clamp(48px, 11vh, 62px);
+    --dial-drift: clamp(44px, 10vh, 56px);
+    --dial-fire:  clamp(40px, 9vh, 50px);
+  }
+  #score-digits { font-size: clamp(34px, 9vh, 56px); }
+  #speed-num { font-size: clamp(22px, 6vh, 34px); }
+  #pursuit { top: calc(var(--mt) + 2px); }
+  #turn-signal { top: calc(var(--mt) + 8vh); }
+  #keep-clear { top: 40%; }
+  #combo-stack { bottom: calc(var(--pad-h) + 22px); width: min(40vw, 240px); }
+  #combo-stack .stripe { height: 7px; }
+  #fever-band { bottom: calc(var(--pad-h) + 4px); font-size: 12px; padding: 4px 10px 3px; }
+  #audio-btns { top: 2px; }
+  #drift-live, #apex-live { font-size: 13px; }
 }
 
 /* ============ how-to-play overlay ============ */
@@ -1154,6 +1457,15 @@ button {
 @media (max-width: 560px) {
   .help-cols { grid-template-columns: 1fr; gap: 14px; }
 }
+/* on a touch device the KEYBOARD column is the one that doesn't apply — lead
+   with TOUCH / MOBILE so the first thing a phone player reads is their controls */
+@media (pointer: coarse) {
+  .help-col:nth-child(1) { order: 2; }
+  .help-col:nth-child(2) { order: 1; }
+  #help { padding: 3vmin var(--mr) calc(var(--mb) + 3vmin) var(--ml); }
+  #help-card { max-height: 88vh; width: 100%; box-shadow: 6px 6px 0 var(--shu); }
+  .help-list .k { min-width: 38px; font-size: 11px; }
+}
 
 #nogl[hidden] { display: none; }
 #nogl {
@@ -1169,31 +1481,6 @@ button {
   font-size: clamp(20px, 4vw, 40px);
   line-height: 1.4;
   padding: 10vmin;
-}
-
-/* ============ mobile ============ */
-
-@media (max-width: 720px) {
-  :root { --m: 5vmin; }
-  #title, #title-fill { font-size: min(30vw, 24vh); bottom: 2vh; }
-  #score-digits { font-size: 13vw; }
-  #speed-num { font-size: 7vw; }
-  #combo-stack {
-    left: 50%;
-    transform: translateX(-50%);
-    bottom: calc(var(--m) + 56px);
-    width: 60vw;
-  }
-  #fever-band { left: 50%; transform: translateX(-50%) scaleX(0); transform-origin: center; }
-  #hint { display: none; }
-  #air-trick { top: 26%; font-size: clamp(20px, 6vw, 40px); }
-  #overdrive-tag { font-size: 9px; letter-spacing: 0.12em; }
-  /* keep apex-live at its 150px base so it clears drift-live (118px) by 32px */
-  #results { width: 100vw; }
-  #results-card { border-left: none; border-top: 3px solid var(--paper); }
-  #restart-hint { display: none; }
-  #roundel { display: none; }
-  #mute-btn { bottom: calc(var(--m) * 0.6); }
 }
 
 @media (prefers-reduced-motion: reduce) {

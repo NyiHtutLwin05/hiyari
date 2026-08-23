@@ -14,11 +14,11 @@
   const KMH = 3.4;               // display conversion
   const KM = 0.000944;           // units → km (consistent with KMH)
   const STEER_VMAX = 16;         // lateral units/s at full lock
-  const X_CLAMP = 8.35;          // right wall — your own carriageway edge
+  const X_WALL_R = 8.35;         // hard right wall — the guardrail lip
   // the road is now TWO-WAY: the left wall reaches clear across the divider onto
   // the far carriageway. Cross CENTER_X and you've SWITCHED to the other road —
   // the camera rides across with you and re-centres on it.
-  const X_CLAMP_L = -21.3;       // left wall — just shy of the far barrier
+  const X_WALL_L = -21.3;        // hard left wall — just shy of the far barrier
   const CENTER_X  = -10.5;       // the divider between the two carriageways
   const OTHER_CENTER = -17.15;   // centre of the far road (mean of ONCOMING_X)
   const ONCOMING_HW = 1.05;      // oncoming car half-width  (body 2.1 wide)
@@ -124,6 +124,33 @@
   const CH_LUNGE_SPEED  = 24;   // forward dart speed once it commits (fast → brief overlap)
   const CH_LUNGE_TIME   = 0.6;  // how long the committed dart lasts before it peels off
 
+  /* ---------- v8: shoulder-hugging & median camping are no longer free ----------
+     The old walls were FIXED (8.35 / −21.3) while the hitbox is not: a car
+     (halfW 1.02) parked on the rail still overlapped the outer lane, but a bike
+     (0.50) or a bicycle (0.40) sat in a sliver of asphalt no traffic could ever
+     reach — park there and nothing on the road could touch you. Worse, the whole
+     strip between the two carriageways (own edge line −9.1 → far edge line −12.4,
+     plus the un-laned shoulders either side of it) is ~5 units of road with NO
+     traffic on it at all: a free corridor for every ride.
+
+     Two rules fix both, and they're width-aware so every ride plays by the same
+     odds instead of the smallest one winning by default:
+       1. the side walls are pulled in until the outermost lane can always reach
+          you — hugging the rail is a lane position, never a hiding place;
+       2. the un-laned middle (median + both inner shoulders) is a CROSSING, not
+          a lane: you have ~1s to get across before the rumble strip spits you
+          back onto a carriageway, bleeds speed, and calls the police in. */
+  const TRAF_HW_MIN = 0.95;      // narrowest traffic half-width (the kei, w 1.9)
+  const EDGE_BITE   = 0.15;      // how far INSIDE the collision threshold a wall sits
+  const ZONE_GRACE  = 1.0;       // seconds you may spend crossing the un-laned middle
+  const ZONE_RAMP   = 0.55;      // seconds for the eject shove to reach full force
+  const ZONE_PUSH   = 30;        // lateral eject speed, units/s (> STEER_VMAX: it wins)
+  const ZONE_SCRUB  = 0.45;      // top-speed multiplier floor while riding the hatching
+  // per-ride handling — a smaller hitbox has to cost something, or the bicycle is
+  // strictly the best ride. Index matches player.vehicle: 0 car, 1 bike, 2 bicycle.
+  const RIDE_TOP = [1, 0.98, 0.92];   // top-speed multiplier
+  const RIDE_CF  = [1, 1.18, 1.34];   // lighter rides get shoved wider through corners
+
   const fmt = (n) => Math.floor(n).toLocaleString('en-US');
   const store = {
     get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
@@ -213,6 +240,29 @@
   let pursuitShown = false;
   let cwSide = 0;   // side the police edge-warning currently points to (-1 left, +1 right, 0 hidden)
 
+  /* v8 systems: ride-aware road limits + the un-laned "keep clear" middle */
+  let xWallR = X_WALL_R, xWallL = X_WALL_L;   // outer walls (ride-width aware)
+  let zoneR = 0, zoneL = 0;                   // inner edges of the un-laned middle
+  let zoneTime = 0, zoneOut = 0;              // dwell timer, 0→1 eject/scrub ramp
+  let keepClearShown = false;
+
+  /* Recomputed on every ride swap. `reach` is how far past a lane centre the
+     collision test still bites (the same 0.88 / 0.9 forgiveness factors the
+     traffic and oncoming checks use), so a wall placed one EDGE_BITE inside it
+     guarantees the outer lane can always reach a parked player — whatever the
+     ride. Never pushed OUTSIDE the physical rails. */
+  function refreshRideLimits() {
+    const reachOwn = (TRAF_HW_MIN + player.halfW) * 0.88 - EDGE_BITE;
+    const reachOnc = (ONCOMING_HW + player.halfW) * 0.90 - EDGE_BITE;
+    xWallR = Math.min(X_WALL_R, LANE_X[LANE_X.length - 1] + reachOwn);
+    xWallL = Math.max(X_WALL_L, world.ONCOMING_X[1] - reachOnc);
+    // the un-laned middle: past the reach of your own left lane, and not yet in
+    // reach of the nearest oncoming lane. Crossable, never campable.
+    zoneR = LANE_X[0] - reachOwn;
+    zoneL = world.ONCOMING_X[0] + reachOnc;
+  }
+
+  refreshRideLimits();
   player.group.position.set(LANE_X[2], 0, 0);
 
   /* ---------- DOM refs ---------- */
@@ -244,6 +294,8 @@
     rSling: $('#r-sling'), rApex: $('#r-apex'), rTrick: $('#r-trick'), rOd: $('#r-od'),
     // v7 HUD: police pursuit
     pursuit: $('#pursuit'), chaseWarn: $('#chase-warn'), rChase: $('#r-chase'), distractCards: $('#distract-cards'),
+    // v8 HUD: the un-laned middle you may cross but never camp
+    keepClear: $('#keep-clear'),
   };
 
   /* ---------- score odometer ---------- */
@@ -926,6 +978,7 @@
       p.obj.rotation.copy(p.rot);
     }
     wreckPieces.length = 0;
+    refreshRideLimits();   // the ride carries over between runs — so must its band
     player.group.position.set(LANE_X[2], 0, 0);
     player.group.rotation.set(0, 0, 0);
     vx = 0;
@@ -979,6 +1032,9 @@
     pursuitShown = false;
     if (el.chaseWarn) { gsap.killTweensOf(el.chaseWarn); el.chaseWarn.style.opacity = 0; }
     cwSide = 0;
+    // v8: keep-clear dwell — the middle is a crossing again on every fresh run
+    zoneTime = 0; zoneOut = 0; keepClearShown = false;
+    if (el.keepClear) { gsap.killTweensOf(el.keepClear); el.keepClear.style.opacity = 0; }
     world.clearDistractors();
     clearDistractCards();
     distractTimer = 8;
@@ -1618,10 +1674,19 @@
 
   el.restartBtn.addEventListener('click', restart);
 
+  /* Settings chips carry two labels — a long desktop one and a short touch one.
+     Writing textContent would blow both spans away, so set them individually. */
+  function setChip(btn, long, short) {
+    if (!btn) return;
+    const l = btn.querySelector('.ab-l'), s = btn.querySelector('.ab-s');
+    if (l) l.textContent = long; else btn.textContent = long;
+    if (s && short != null) s.textContent = short;
+  }
+
   /* mute */
   let muted = store.get('hiyari-muted') === '1';
   function syncMuteBtn() {
-    el.muteBtn.textContent = muted ? 'SOUND OFF' : 'SOUND ON';
+    setChip(el.muteBtn, muted ? 'SOUND OFF' : 'SOUND ON', '音');
     el.muteBtn.classList.toggle('muted', muted);
   }
   function toggleMute() {
@@ -1639,7 +1704,7 @@
   let musicOn = store.get('hiyari-music') !== '0';
   audio._musicPref = musicOn;
   function syncMusicBtn() {
-    el.musicBtn.textContent = musicOn ? 'MUSIC ON' : 'MUSIC OFF';
+    setChip(el.musicBtn, musicOn ? 'MUSIC ON' : 'MUSIC OFF', '♪');
     el.musicBtn.classList.toggle('muted', !musicOn);
   }
   syncMusicBtn();
@@ -1656,13 +1721,19 @@
   /* ride swap — car → bike → bicycle, cycled with C or the RIDE button.
      grounded run only, so the crash pieces / hitbox never swap mid-air. */
   const vehicleBtn = document.getElementById('vehicle-btn');
+  const RIDE_JP = { CAR: '車', BIKE: '単車', BICYCLE: '自転車' };
   function syncVehicleBtn() {
-    if (vehicleBtn) vehicleBtn.textContent = 'RIDE — ' + player.vehicleName;
+    setChip(vehicleBtn, 'RIDE — ' + player.vehicleName, RIDE_JP[player.vehicleName] || '車');
   }
   syncVehicleBtn();
   function cycleVehicle() {
     if (state !== 'run' || airborne || paused || helpOpen) return;
     const name = player.setVehicle(player.vehicle + 1);
+    // the road limits are hitbox-derived — a narrower ride gets a narrower band,
+    // so no ride can park somewhere the traffic it shares the road with can't reach
+    refreshRideLimits();
+    const p = player.group.position;
+    p.x = Math.max(xWallL, Math.min(xWallR, p.x));
     syncVehicleBtn();
     audio.uiBlip();
     showStamp(1, { jp: '車両変更', word: name, cls: 't2' }, 0);
@@ -1699,6 +1770,9 @@
   function togglePause() {
     if (state !== 'run') return;
     paused = !paused;
+    // paused is the moment a touch player CAN reach the settings chips — the
+    // coarse layout hides all but RIDE while driving, and shows them again here
+    document.body.classList.toggle('paused', paused);
     el.pause.style.display = paused ? 'flex' : 'none';
     el.pause.setAttribute('aria-hidden', paused ? 'false' : 'true');
     if (paused) gsap.globalTimeline.pause();
@@ -1708,8 +1782,12 @@
   // tap anywhere on the overlay resumes — touch players have no P key
   el.pause.addEventListener('pointerdown', (e) => {
     e.preventDefault();
-    if (paused) togglePause();
+    // the settings chips sit ABOVE the veil now; a tap on one is not a resume
+    if (paused && !(e.target && e.target.closest && e.target.closest('button'))) togglePause();
   });
+  // …and the touch-only chip that gets them INTO pause in the first place
+  const pauseBtn = document.getElementById('pause-btn');
+  if (pauseBtn) pauseBtn.addEventListener('click', () => { audio.resume(); if (!paused) togglePause(); });
   function clearInputs() {
     steerL = false;
     steerR = false;
@@ -1773,9 +1851,11 @@
     const sf = slingTimer / SLING_TIME;
     const slingMult = slingTimer > 0 ? 1 + (SLING_MULT - 1) * sf * (2 - sf) : 1;
 
-    // the speed the systems ASK for…
+    // the speed the systems ASK for… (a smaller ride tops out lower, and the
+    // median hatching scrubs you right down — camping it costs real pace)
     const speedTarget = baseSpeed * (fever ? 1.12 : 1) * (boosting ? 1.42 : 1) *
-            (1 + 0.05 * draftCharge) * slingMult * (overdrive ? OD_SPEED : 1);
+            (1 + 0.05 * draftCharge) * slingMult * (overdrive ? OD_SPEED : 1) *
+            (RIDE_TOP[player.vehicle] || 1) * (1 - (1 - ZONE_SCRUB) * zoneOut);
     // …and the speed the car actually DOES. Asymmetric chase: surges arrive
     // fast (feels responsive) but decay is slow (never the sudden "why am I
     // slowing down" jolt after a pass — the user's exact complaint).
@@ -1861,6 +1941,36 @@
     audio.setDrive(speedNorm, vx / STEER_VMAX, tier, boosting ? 1 : 0);
   }
 
+  /* ---------- the un-laned middle: a crossing, never a lane ----------
+     Between zoneR (past your own left lane's reach) and zoneL (not yet in the
+     oncoming lane's reach) there is no traffic at all — the median hatching and
+     the two shoulders either side of it. Crossing takes ~0.4s at full lock, so
+     ZONE_GRACE never touches a genuine carriageway switch; sit there longer and
+     the rumble strip takes over: it bleeds speed, shoves you back onto whichever
+     road is nearer, and the patrol car that was still minutes away comes now. */
+  function updateKeepClear(dt, p) {
+    const inZone = state === 'run' && !airborne && p.x > zoneL && p.x < zoneR;
+    if (inZone) zoneTime += dt;
+    else zoneTime = Math.max(0, zoneTime - dt * 3);
+
+    zoneOut = Math.max(0, Math.min(1, (zoneTime - ZONE_GRACE) / ZONE_RAMP));
+    if (zoneOut > 0) {
+      // eject toward the nearer carriageway — a shove that out-muscles full lock
+      const dir = (zoneR - p.x) < (p.x - zoneL) ? 1 : -1;
+      p.x += dir * ZONE_PUSH * zoneOut * dt;
+      if (Math.sign(vx) === -dir) vx *= Math.max(0, 1 - 4 * dt);   // fight the throttle-in
+      if (chaserTimer > 1.5) chaserTimer = 1.5;                     // camping the median calls it in
+    }
+    showKeepClear(inZone && zoneTime > ZONE_GRACE * 0.45);
+  }
+
+  function showKeepClear(on) {
+    if (!el.keepClear || on === keepClearShown) return;
+    keepClearShown = on;
+    gsap.killTweensOf(el.keepClear);
+    gsap.to(el.keepClear, { opacity: on ? 1 : 0, duration: on ? 0.18 : 0.3, ease: 'power2.out' });
+  }
+
   function updatePlayer(dt, raw) {
     const steer = (steerR ? 1 : 0) - (steerL ? 1 : 0) || touchSteer;
     const steerSign = Math.sign(steer);
@@ -1884,13 +1994,15 @@
     // authority (26.4) so a committed drift can always hook the line back inside.
     let cf = curveK.v * speed * speed * CF_K;
     cf = Math.max(-CF_MAX, Math.min(CF_MAX, cf));
+    cf *= RIDE_CF[player.vehicle] || 1;         // a lighter ride gets pushed wider
     if (airborne) cf *= CF_AIR;                 // don't shove landings around
     if (apexDrift) cf *= (1 - GRIP_CANCEL);     // drift grip cancels most of the push
     p.x -= cf * dt;                             // BEFORE the clamp: the wall always catches first
 
     p.x += vx * dt;
-    if (p.x > X_CLAMP) { p.x = X_CLAMP; vx = Math.min(0, vx); }
-    if (p.x < X_CLAMP_L) { p.x = X_CLAMP_L; vx = Math.max(0, vx); }
+    updateKeepClear(dt, p);
+    if (p.x > xWallR) { p.x = xWallR; vx = Math.min(0, vx); }
+    if (p.x < xWallL) { p.x = xWallL; vx = Math.max(0, vx); }
 
     if (airborne) {
       // in the air the SAME keys become trick controls — continuous rotation you "fly"
@@ -2392,6 +2504,13 @@
     // touch controls only exist while actually driving — hides them under the
     // intro/crash/results screens (which don't full-screen-cover on wide tablets)
     document.body.classList.toggle('playing', state === 'run' || state === 'starting');
+    // the results poster owns the whole screen on a phone — the settings chips
+    // must get out of its way rather than float over RUN IT BACK
+    document.body.classList.toggle('scored', state === 'crash' || state === 'results');
+    // on the intro poster HOW TO PLAY / MUSIC / SOUND are the only chips that
+    // mean anything — and they were buried under the poster, so a touch player
+    // could never read the controls before their first run
+    document.body.classList.toggle('intro', state === 'intro' || state === 'boot');
     if (paused || helpOpen) { renderer.render(scene, camera); return; }
 
     const dt = raw * ts.v;
@@ -2448,7 +2567,7 @@
     state = 'intro';
     gsap.set(el.results, { y: 0, yPercent: 102 });   // clear the parsed CSS px offset
     if (window.matchMedia && matchMedia('(pointer: coarse)').matches) {
-      $('#start-keys').textContent = 'hold to drive · then use the ◀ ▶ · DRIFT · 加速 buttons · tap HOW TO PLAY';
+      $('#start-keys').textContent = 'hold to drive · ◀ ▶ steer · 加速 boost · DRIFT · FIRE · tap ? for how to play';
     }
     // paint everything that needs type (fonts are ready now)
     player.paintLivery(1, false);
@@ -2483,8 +2602,13 @@
       r.z = -100;
       r.group.visible = true;
     },
-    setVehicle: (i) => player.setVehicle(i),
+    // goes through the same door the C key does, so the ride-width road limits
+    // are always recomputed — never let a test park a bicycle outside its band
+    setVehicle: (i) => { const n = player.setVehicle(i); refreshRideLimits(); syncVehicleBtn(); return n; },
     spawnChaser: () => { chaserTimer = 0; spawnChaser(); },
+    // drop the player on an exact x with no lateral momentum — lets a test park
+    // on the median / the rail without steering into something on the way there
+    park: (x) => { player.group.position.x = Math.max(xWallL, Math.min(xWallR, x)); vx = 0; },
     snap: () => ({
       state,
       vehicle: player.vehicleName,
@@ -2494,6 +2618,13 @@
       nearMisses,
       headOns,
       onOtherRoad,
+      halfW: player.halfW,
+      wallR: Math.round(xWallR * 1000) / 1000,
+      wallL: Math.round(xWallL * 1000) / 1000,
+      zoneR: Math.round(zoneR * 1000) / 1000,
+      zoneL: Math.round(zoneL * 1000) / 1000,
+      zoneTime: Math.round(zoneTime * 100) / 100,
+      zoneOut: Math.round(zoneOut * 100) / 100,
       camShiftX: Math.round(camShiftX * 100) / 100,
       score: Math.floor(score),
       boostMeter: Math.round(boostMeter),

@@ -55,6 +55,13 @@
   </div>
   <div id="fever-band"><span>ヒヤリハット FEVER — POINTS ×2</span></div>
 
+  <!-- the median / shoulder hatching is a crossing, not a lane: sit on it and
+       the rumble strip scrubs your speed and shoves you back onto a carriageway -->
+  <div id="keep-clear" aria-hidden="true">
+    <span class="kc-jp" lang="ja">キープクリア</span>
+    <span class="kc-en">KEEP CLEAR — CROSS, DON'T CAMP</span>
+  </div>
+
   <div id="pursuit" aria-hidden="true">
     <span id="pursuit-lights"><i class="pl-red"></i><i class="pl-blue"></i></span>
     <span id="pursuit-text" lang="ja">警察 POLICE PURSUIT</span>
@@ -68,7 +75,7 @@
   </div>
 
   <div id="stamps"></div>
-  <div id="hint">&#8592;&#8594; STEER &nbsp;&middot;&nbsp; SHIFT — DRIFT &nbsp;&middot;&nbsp; &#8593; — BOOST &nbsp;&middot;&nbsp; F — FIRE &nbsp;&middot;&nbsp; C — RIDE &nbsp;&middot;&nbsp; RAMP → AIR TRICKS &nbsp;&middot;&nbsp; PRESS <b>?</b> / HOW TO PLAY</div>
+  <div id="hint">&#8592;&#8594; STEER &nbsp;&middot;&nbsp; SHIFT — DRIFT &nbsp;&middot;&nbsp; &#8593; — BOOST &nbsp;&middot;&nbsp; F — FIRE &nbsp;&middot;&nbsp; C — RIDE &nbsp;&middot;&nbsp; P — PAUSE</div>
 </div>
 
 <button id="boost-btn" type="button" aria-label="Hold to boost"><span lang="ja">加速</span></button>
@@ -172,11 +179,17 @@
   </div>
 </section>
 
+<!-- settings chips. Each carries a long desktop label and a short touch label;
+     the media query below swaps which one is rendered, so a phone gets thumb-
+     sized chips instead of a full sentence of letterspaced caps per button. -->
 <div id="audio-btns">
-  <button id="vehicle-btn" type="button" aria-label="Change vehicle">RIDE&nbsp;—&nbsp;CAR</button>
-  <button id="help-btn" type="button" aria-label="How to play">HOW&nbsp;TO&nbsp;PLAY</button>
-  <button id="music-btn" type="button" aria-label="Toggle music">MUSIC&nbsp;ON</button>
-  <button id="mute-btn" type="button" aria-label="Toggle sound">SOUND&nbsp;ON</button>
+  <button id="vehicle-btn" type="button" aria-label="Change vehicle"><span class="ab-l">RIDE&nbsp;—&nbsp;CAR</span><span class="ab-s" lang="ja">車</span></button>
+  <!-- touch-only: there is no P key on a phone, so pausing had no affordance at
+       all — and pause is where the other settings become reachable mid-run -->
+  <button id="pause-btn" type="button" aria-label="Pause"><span class="ab-s">❙❙</span></button>
+  <button id="help-btn" type="button" aria-label="How to play"><span class="ab-l">HOW&nbsp;TO&nbsp;PLAY</span><span class="ab-s">?</span></button>
+  <button id="music-btn" type="button" aria-label="Toggle music"><span class="ab-l">MUSIC&nbsp;ON</span><span class="ab-s">♪</span></button>
+  <button id="mute-btn" type="button" aria-label="Toggle sound"><span class="ab-l">SOUND&nbsp;ON</span><span class="ab-s" lang="ja">音</span></button>
 </div>
 
 <!-- ============ HOW TO PLAY ============ -->
@@ -196,7 +209,7 @@
           <li><span class="k">▲</span><span class="d">Boost (<b>W</b>) — spends the BOOST gauge</span></li>
           <li><span class="k">SHIFT</span><span class="d">Drift — hold while steering (or <b>SPACE</b>)</span></li>
           <li><span class="k">F</span><span class="d">Fire the cannon — clears a car, spends 1 ammo</span></li>
-          <li><span class="k">C</span><span class="d">Change ride — <b>car → bike → bicycle</b> (or the <b>RIDE</b> button). Smaller rides slip tighter gaps.</span></li>
+          <li><span class="k">C</span><span class="d">Change ride — <b>car → bike → bicycle</b> (or the <b>RIDE</b> button). Smaller rides slip tighter gaps, but they top out slower and get pushed wider through corners.</span></li>
           <li><span class="k">P</span><span class="d">Pause · <span class="k2">M</span> mute · <span class="k2">R</span> restart</span></li>
         </ul>
         <h3 class="air">✈ IN THE AIR (after a ramp)</h3>
@@ -210,10 +223,11 @@
       <div class="help-col">
         <h3>▤ TOUCH / MOBILE</h3>
         <ul class="help-list">
-          <li><span class="k">◀ ▶</span><span class="d">Bottom-left buttons — steer</span></li>
-          <li><span class="k">加速</span><span class="d">Bottom-right red button — boost</span></li>
-          <li><span class="k">DRIFT</span><span class="d">Hold the DRIFT button while steering</span></li>
-          <li><span class="k">FIRE</span><span class="d">Above the steer buttons — one shot per tap</span></li>
+          <li><span class="k">◀ ▶</span><span class="d">Bottom-<b>left</b> pair — steer</span></li>
+          <li><span class="k">加速</span><span class="d">Bottom-<b>right</b> red dial — boost</span></li>
+          <li><span class="k">DRIFT</span><span class="d">Yellow dial beside 加速 — hold it while steering</span></li>
+          <li><span class="k">FIRE</span><span class="d">Above 加速 — one shot per tap</span></li>
+          <li><span class="k" lang="ja">車</span><span class="d">Top of the screen — change ride. <span class="k2">❙❙</span> pauses, and the pause screen holds <b>?</b> how-to-play, <span class="k2">♪</span> music and <span class="k2" lang="ja">音</span> sound.</span></li>
         </ul>
         <h3 class="air">✈ IN THE AIR (mobile)</h3>
         <ul class="help-list">
@@ -223,6 +237,7 @@
         <ul class="help-list">
           <li><span class="d">When <b>TURN LEFT / RIGHT</b> flashes, steer that way — <b>hold DRIFT through the apex</b> for triple ink.</span></li>
           <li><span class="d">Steer left over the yellow line to <b>switch to the other road</b> — the camera rides across with you. Cars there come <b>head-on</b>; shaving one pays <b>×2 ink</b>, a hit is a crash.</span></li>
+          <li><span class="d">The hatched middle is a <b>crossing, not a lane</b> — sit on it and <b>キープクリア KEEP CLEAR</b> flashes, your speed scrubs, the police come, and the rumble strip shoves you back onto a carriageway. Same for the rails: <b>every ride's edge sits inside the outer lane's reach</b>, so hugging the wall is a lane choice, never a hiding place.</span></li>
           <li><span class="d">Yellow <b>補給 crates</b> hold <b>AMMO</b> or a <b>SHIELD</b> — shoot them or drive through. The shield blocks <b>one</b> crash.</span></li>
         </ul>
         <h3 class="air">🚓 警察 POLICE PURSUIT</h3>

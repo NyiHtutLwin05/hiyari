@@ -21,6 +21,7 @@ Weave through traffic at 200 km/h — every close call is stamped onto the aspha
 - [Cornering & drifting](#-cornering--drifting)
 - [The two-way road — switch carriageways](#-the-two-way-road--switch-carriageways)
 - [Change your ride — car · bike · bicycle](#-change-your-ride--car--bike--bicycle)
+- [No hiding places — the road is width-aware](#-no-hiding-places--the-road-is-width-aware)
 - [The cannon, supply crates & shield](#-the-cannon-supply-crates--shield)
 - [Police pursuit — outrun the law](#-police-pursuit--outrun-the-law)
 - [Distractions — don't take the bait](#-distractions--dont-take-the-bait)
@@ -77,19 +78,30 @@ to pull your eyes off the road.
 
 ### 📱 Touch (mobile / tablet)
 
-On a touchscreen the game shows an on-screen control pad:
+On a touchscreen the game shows an on-screen control pad. **Two thumbs, two clusters,
+nothing overlapping** — the dials scale with the viewport, so the layout holds from a
+375 px phone up to a tablet, in portrait *and* landscape, clear of the notch and the
+home bar (`env(safe-area-inset-*)`).
 
 | Button | Where | Action |
 |--------|-------|--------|
-| **`◀` `▶`** | bottom-**left** | **Steer** left / right |
-| **`FIRE`** | above the steer buttons | **One shot per tap** |
-| **`DRIFT`** (yellow) | bottom-**right, upper** | **Hold** to drift while steering |
-| **`加速`** (red) | bottom-**right, lower** | **Boost** |
-| **HOW TO PLAY** | top-right | Full controls card |
+| **`◀` `▶`** | bottom-**left** pair | **Steer** left / right |
+| **`加速`** (red) | bottom-**right** corner | **Boost** |
+| **`DRIFT`** (yellow) | **beside** 加速 | **Hold** to drift while steering |
+| **`FIRE`** | **above** 加速 | **One shot per tap** |
+| **`車`** | top of the screen | **Change ride** (car → bike → bicycle) |
+| **`❙❙`** | top of the screen | **Pause** — the pause screen holds `?` how-to-play, `♪` music and `音` sound |
 
-> 💡 **Mobile drifting** now has its own dedicated button — hold **DRIFT** and press a
+> 💡 **Mobile drifting** has its own dedicated button — hold **DRIFT** and press a
 > steer arrow at the same time. (The old "two-finger" gesture is gone; it was
 > impossible to discover.)
+
+While you're driving, the phone HUD carries **only what you can act on**: the score,
+the speed plate, the boost gauge and the ammo pips. The keyboard prompts
+(`BOOST 加速 — ↑`, `FIRE 射撃 — F`, the route ticker, the bottom hint strip) are
+desktop-only — on touch the buttons that drive them are already on screen. The combo
+stripes and the FEVER band sit in the free channel **between** the two thumb clusters,
+and `?` **HOW TO PLAY is reachable from the title poster**, before your first run.
 
 ### 🚀 To start
 
@@ -172,15 +184,43 @@ and the camera slides home again.
 Press **`C`** (or tap the **RIDE** button, top-right) to swap between three rides,
 mid-run:
 
-| Ride | Feel |
-|------|------|
-| 🚗 **Car** | The kei-racer — the classic HIYARI wedge, biggest hitbox. |
-| 🏍️ **Bike** | A sport motorbike — narrower, slips through gaps a car can't. |
-| 🚲 **Bicycle** | Tiniest hitbox of all — thread traffic by a whisker. |
+| Ride | Hitbox | Top speed | Corners | Feel |
+|------|--------|-----------|---------|------|
+| 🚗 **Car** | widest (half-width 1.02) | 100% | planted | The kei-racer — the classic HIYARI wedge. |
+| 🏍️ **Bike** | 0.50 | 98% | pushed a little wider | A sport motorbike — slips through gaps a car can't. |
+| 🚲 **Bicycle** | 0.40 | 92% | pushed noticeably wider | Tiniest hitbox of all — thread traffic by a whisker. |
 
 Each ride has its own **collision box**, so a smaller one is harder to hit and can
 shave far closer — the whole crash-explosion (rider and all) is rebuilt per ride. Your
 choice sticks across restarts.
+
+**It is a trade, not an upgrade.** A lighter ride tops out lower and gets shoved wider
+by centrifugal force through a bend (never past steering authority, so you can always
+hold the line — it just costs you a committed drift instead of a lazy one). And the
+road itself no longer hands narrow rides a free ride — see below.
+
+### 🚧 No hiding places — the road is width-aware
+
+The rails and the median used to be an exploit. The walls were **fixed** while the
+hitbox was not, so a car parked on the rail still overlapped the outer lane, but a
+**bike or bicycle sat in a sliver of asphalt no traffic could ever reach** — park there
+and nothing on the road could touch you. Worse, the whole strip **between the two
+carriageways** (the hatched median plus the un-laned shoulder either side of it) is
+~5 units of road with **no traffic on it at all** — a free corridor for every ride.
+
+Two rules close both, and both are derived from **your current hitbox**, so every ride
+plays the same odds:
+
+1. **The side walls are pulled in until the outermost lane can always reach you.** Each
+   wall sits just *inside* the collision threshold for the narrowest traffic on the
+   road, recomputed on every ride swap. Hugging the rail is a **lane position**, never
+   a hiding place — on any ride.
+2. **The un-laned middle is a crossing, not a lane.** Cross it and nothing happens — at
+   full lock it takes ~0.4 s, well under the ~1 s grace. *Camp* it and
+   **キープクリア KEEP CLEAR** flashes, your top speed scrubs, a patrol car is called
+   in, and the rumble strip shoves you back onto whichever carriageway is nearer with
+   more force than full steering lock. Switching roads is untouched; parking on the
+   line is over.
 
 ---
 

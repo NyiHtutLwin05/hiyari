@@ -80,6 +80,26 @@
   --f-jp:      'Noto Sans JP', sans-serif;
 
   --m: 4vmin;            /* poster margin */
+
+  /* the viewport is `viewport-fit=cover`, so the notch, the rounded corners and
+     the home bar all sit INSIDE it. Every fixed HUD anchor uses the --m? pair
+     below instead of raw --m, so nothing lands under a system chrome cut-out. */
+  --sa-t: env(safe-area-inset-top, 0px);
+  --sa-r: env(safe-area-inset-right, 0px);
+  --sa-b: env(safe-area-inset-bottom, 0px);
+  --sa-l: env(safe-area-inset-left, 0px);
+  --mt: calc(var(--m) + var(--sa-t));
+  --mr: calc(var(--m) + var(--sa-r));
+  --mb: calc(var(--m) + var(--sa-b));
+  --ml: calc(var(--m) + var(--sa-l));
+
+  /* touch control dial sizes — resolved here so the HUD can reserve room above
+     them by name instead of by hard-coded pixel guesses that drift out of sync */
+  --dial-steer: 68px;
+  --dial-boost: 68px;
+  --dial-drift: 60px;
+  --dial-fire:  54px;
+  --dial-gap:   12px;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -129,8 +149,8 @@ button {
 /* --- score, top-left --- */
 #score-block {
   position: absolute;
-  top: var(--m);
-  left: var(--m);
+  top: var(--mt);
+  left: var(--ml);
 }
 #score-digits {
   display: flex;
@@ -165,8 +185,8 @@ button {
 /* --- speed plate, top-right --- */
 #speed-block {
   position: absolute;
-  top: var(--m);
-  right: var(--m);
+  top: var(--mt);
+  right: var(--mr);
   text-align: right;
   perspective: 500px;
 }
@@ -256,8 +276,8 @@ button {
 /* live drift ink counter, appears only mid-slide */
 #drift-live {
   position: absolute;
-  left: var(--m);
-  bottom: calc(var(--m) + 118px);
+  left: var(--ml);
+  bottom: calc(var(--mb) + 118px);
   font-family: var(--f-jp);
   font-weight: 900;
   font-size: clamp(15px, 2vw, 22px);
@@ -274,8 +294,8 @@ button {
 /* live apex ink, appears only mid-corner-drift (sits above drift-live) */
 #apex-live {
   position: absolute;
-  left: var(--m);
-  bottom: calc(var(--m) + 150px);
+  left: var(--ml);
+  bottom: calc(var(--mb) + 150px);
   font-family: var(--f-jp);
   font-weight: 900;
   font-size: clamp(15px, 2vw, 22px);
@@ -310,8 +330,8 @@ button {
 /* --- combo stack, bottom-left --- */
 #combo-stack {
   position: absolute;
-  left: var(--m);
-  bottom: calc(var(--m) + 34px);
+  left: var(--ml);
+  bottom: calc(var(--mb) + 34px);
   display: flex;
   flex-direction: column-reverse;
   gap: 4px;
@@ -326,8 +346,8 @@ button {
 
 #fever-band {
   position: absolute;
-  left: var(--m);
-  bottom: var(--m);
+  left: var(--ml);
+  bottom: var(--mb);
   background: var(--shu);
   color: var(--paper);
   font-family: var(--f-display);
@@ -349,8 +369,8 @@ button {
   opacity: 0;
   will-change: transform, opacity;
 }
-.stamp.left  { left: var(--m);  text-align: left; }
-.stamp.right { right: var(--m); text-align: right; }
+.stamp.left  { left: var(--ml);  text-align: left; }
+.stamp.right { right: var(--mr); text-align: right; }
 .stamp .s-jp {
   font-family: var(--f-jp);
   font-weight: 900;
@@ -376,7 +396,9 @@ button {
 /* --- controls hint --- */
 #hint {
   position: absolute;
-  bottom: var(--m);
+  /* sits one row ABOVE the settings chips — centred text and a right-anchored
+     button row were both reaching for the same strip of screen */
+  bottom: calc(var(--mb) + 42px);
   left: 50%;
   transform: translateX(-50%);
   font-size: 12px;
@@ -465,7 +487,7 @@ button {
 }
 #title {
   position: absolute;
-  left: var(--m);
+  left: var(--ml);
   bottom: 0;
   font-family: var(--f-display);
   font-weight: 400;
@@ -494,7 +516,7 @@ button {
 /* vermilion ink flood while holding to drive */
 #title-fill {
   position: absolute;
-  left: var(--m);
+  left: var(--ml);
   bottom: 0;
   font-family: var(--f-display);
   font-size: min(23vw, 34vh);
@@ -509,7 +531,7 @@ button {
 #spine {
   position: absolute;
   top: 6%;
-  right: calc(var(--m) * 0.75);
+  right: calc(var(--mr) * 0.75);
   writing-mode: vertical-rl;
   font-family: var(--f-jp);
   font-weight: 900;
@@ -521,7 +543,7 @@ button {
 #roundel {
   position: absolute;
   top: 7%;
-  left: var(--m);
+  left: var(--ml);
   width: clamp(88px, 12vw, 132px);
   height: auto;
   transform: rotate(-8deg);
@@ -553,7 +575,7 @@ button {
 #colophon {
   position: absolute;
   inset: 0;
-  padding: calc(var(--m) * 0.9) var(--m);
+  padding: calc(var(--m) * 0.9) var(--mr) var(--mb) var(--ml);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -641,7 +663,7 @@ button {
   height: 100%;
   background: var(--green);
   border-left: 3px solid var(--paper);
-  padding: calc(var(--m) * 1.2) calc(var(--m) * 1.1);
+  padding: calc(var(--m) * 1.2 + var(--sa-t)) calc(var(--m) * 1.1) calc(var(--mb) + 6px);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -779,21 +801,38 @@ button {
 
 #audio-btns {
   position: fixed;
-  right: var(--m);
-  bottom: var(--m);
+  right: var(--mr);
+  bottom: var(--mb);
   z-index: 50;   /* below the results poster so it never collides with RUN IT BACK */
   display: flex;
   gap: 8px;
+  align-items: stretch;
 }
-#mute-btn, #music-btn {
+/* every chip carries both labels; only one is ever rendered (see the coarse
+   block below, which swaps to the short glyph on touch) */
+.ab-s { display: none; }
+#pause-btn { display: none; }   /* touch-only — desktop has the P key */
+/* the intro poster is z-70 and opaque, so the chips have to climb over it or a
+   first-time player can never open HOW TO PLAY before their first run */
+body.intro #audio-btns { z-index: 76; }
+body.intro #vehicle-btn, body.intro #pause-btn { display: none; }
+body.scored #audio-btns { display: none; }   /* the results poster owns the screen */
+#mute-btn, #music-btn, #vehicle-btn {
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.24em;
+  white-space: nowrap;
   color: color-mix(in srgb, var(--paper) 62%, transparent);
   border: 1px solid color-mix(in srgb, var(--paper) 35%, transparent);
   padding: 8px 12px 7px;
   transition: color 0.15s ease, border-color 0.15s ease;
 }
+/* the ride swap is a GAME action, not a setting — it reads in caution yellow */
+#vehicle-btn {
+  color: var(--yellow);
+  border-color: color-mix(in srgb, var(--yellow) 55%, transparent);
+}
+#vehicle-btn:hover { color: var(--yellow); border-color: var(--yellow); }
 #mute-btn:hover, #music-btn:hover { color: var(--paper); border-color: var(--paper); }
 #music-btn.muted {
   color: color-mix(in srgb, var(--paper) 35%, transparent);
@@ -807,15 +846,13 @@ button {
   text-decoration: line-through;
 }
 
-/* on-screen boost trigger — coarse pointers only */
+/* on-screen boost trigger — coarse pointers only. Its geometry lives with the
+   rest of the thumb pad in the (pointer: coarse) block further down, so the
+   whole cluster is laid out from one set of numbers and can't drift apart. */
 #boost-btn {
   display: none;
   position: fixed;
-  right: var(--m);
-  bottom: calc(var(--m) + 52px);
   z-index: 45;
-  width: 72px;
-  height: 72px;
   border-radius: 50%;
   border: 3px solid var(--shu);
   background: color-mix(in srgb, var(--ink) 70%, transparent);
@@ -829,9 +866,6 @@ button {
   user-select: none;
 }
 #boost-btn:active { background: var(--shu); color: var(--paper); }
-@media (pointer: coarse) {
-  body.playing #boost-btn { display: block; }
-}
 
 /* ============ ammo pips + shield tag (in #speed-block) ============ */
 #ammo-block { margin-top: 7px; }
@@ -1026,10 +1060,149 @@ button {
   .pl-red, .pl-blue { animation: none; opacity: 1; }
 }
 
+/* ============ keep-clear banner (riding the un-laned middle) ============ */
+#keep-clear {
+  position: absolute;
+  top: 34%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 12;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 7px 16px 6px;
+  background: var(--yellow);
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  will-change: opacity;
+}
+.kc-jp {
+  font-family: var(--f-jp);
+  font-weight: 900;
+  font-size: clamp(15px, 2.6vw, 24px);
+  letter-spacing: 0.12em;
+  line-height: 1;
+}
+.kc-en {
+  font-family: var(--f-display);
+  font-size: clamp(9px, 1.3vw, 13px);
+  letter-spacing: 0.14em;
+  line-height: 1;
+}
+
+/* ============ narrow viewports (typography + poster scaling) ============
+   Layout for TOUCH devices lives in the (pointer: coarse) block below, which
+   comes later in the file and therefore wins — this block only handles "the
+   screen is narrow", which is also true of a small desktop window. */
+
+@media (max-width: 720px) {
+  :root { --m: 5vmin; }
+  #title, #title-fill { font-size: min(30vw, 24vh); bottom: 2vh; }
+  #score-digits { font-size: clamp(38px, 11vw, 74px); }
+  #score-label { font-size: 10px; letter-spacing: 0.24em; }
+  #score-rule { height: 2px; margin-top: 4px; }
+  #speed-num { font-size: clamp(24px, 7vw, 40px); }
+  #hint { display: none; }
+  #air-trick { top: 26%; font-size: clamp(20px, 6vw, 40px); }
+  #overdrive-tag { font-size: 9px; letter-spacing: 0.12em; }
+  #results { width: 100vw; }
+  #results-card { border-left: none; border-top: 3px solid var(--paper); }
+  #restart-hint { display: none; }
+  /* the 15-row ledger is taller than a phone, so RUN IT BACK used to sit below
+     the fold with no visible scroll cue — compact the rows AND pin the button */
+  .ledger .row { margin: 8px 0; }
+  .ledger .lbl { font-size: 11px; letter-spacing: 0.16em; }
+  .ledger .val { font-size: 17px; }
+  #results header { padding-bottom: 8px; margin-bottom: 12px; }
+  #score-final-rule { margin: 14px 0 8px; }
+  #r-score { font-size: clamp(48px, 15vw, 88px); }
+  #restart-btn {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    margin-top: 14px;
+    padding: 14px 18px 12px;
+    box-shadow: 0 -14px 18px 10px var(--green), 0 0 0 3px var(--paper);
+  }
+  #roundel { display: none; }
+  #credit { display: none; }   /* the colophon needs the room for the chips */
+  #combo-stack {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    bottom: calc(var(--mb) + 56px);
+    width: min(60vw, 320px);
+  }
+  #fever-band { left: 50%; right: auto; transform: translateX(-50%) scaleX(0); transform-origin: center; }
+  /* four full-width caps chips cannot share one row on a phone — let them wrap
+     inside the margins instead of overflowing the viewport (they used to run
+     clean off the left edge and land on top of the steering buttons) */
+  #audio-btns {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    max-width: calc(100vw - var(--ml) - var(--mr));
+  }
+}
+
+/* ============ short viewports (landscape phones): the results ledger ============
+   15 rows down one column is taller than a landscape phone, which left RUN IT
+   BACK below the fold with no scroll cue. Two columns + a pinned button fit the
+   whole poster on ~390px of height. */
+@media (max-height: 560px) {
+  #results { width: min(580px, 100vw); }
+  /* only the LEDGER scrolls — the score and RUN IT BACK are the two things a
+     player actually needs, so they stay pinned in view at any height */
+  #results-card { padding: 12px 16px calc(var(--mb) + 6px); overflow: hidden; }
+  .ledger {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  #results header { padding-bottom: 6px; margin-bottom: 8px; }
+  #results-kicker { font-size: 20px; }
+  #results-jp { font-size: 12px; }
+  .ledger { display: grid; grid-template-columns: 1fr 1fr; column-gap: 18px; }
+  .ledger .row { margin: 4px 0; gap: 7px; }
+  .ledger .lbl { font-size: 10px; letter-spacing: 0.1em; }
+  .ledger .val { font-size: 14px; }
+  #score-final-rule { height: 3px; margin: 8px 0 4px; }
+  #r-score-label { font-size: 10px; letter-spacing: 0.24em; }
+  #r-score { font-size: 36px; line-height: 1; }
+  #new-record { font-size: 13px; padding: 3px 8px 2px; margin-top: 4px; }
+  #restart-btn {
+    flex: 0 0 auto;
+    margin-top: 8px;
+    padding: 10px 14px 8px;
+    font-size: 17px;
+  }
+  #restart-hint { display: none; }
+}
+
 /* ============ touch control pad (coarse pointers only) ============ */
+/* One layout, two thumbs, zero overlaps. Everything is sized off the --dial-*
+   tokens and stacked with calc() from the safe-area anchors, so the clusters
+   scale down together on a small phone instead of piling on top of each other
+   (the old pad hard-coded 74/84/66px and put FIRE over the steer pair — on a
+   375px screen the settings row landed straight on top of both). */
 #touch-controls { display: none; }
 @media (pointer: coarse) {
+  :root {
+    --dial-steer: clamp(56px, 15.5vw, 74px);
+    --dial-boost: clamp(56px, 15.5vw, 74px);
+    --dial-drift: clamp(50px, 13.5vw, 66px);
+    --dial-fire:  clamp(44px, 12vw, 58px);
+    --dial-gap:   clamp(8px, 2.6vw, 14px);
+    /* how tall the thumb pad is — the HUD keeps its live counters above this */
+    --pad-h: calc(var(--mb) + var(--dial-boost) + var(--dial-gap) + var(--dial-fire));
+  }
+
   body.playing #touch-controls { display: block; }   /* only while driving */
+  body.playing #boost-btn { display: block; }
   #touch-controls {
     position: fixed;
     inset: 0;
@@ -1038,10 +1211,10 @@ button {
   }
   #tc-steer {
     position: fixed;
-    left: var(--m);
-    bottom: var(--m);
+    left: var(--ml);
+    bottom: var(--mb);
     display: flex;
-    gap: 14px;
+    gap: var(--dial-gap);
     pointer-events: none;
   }
   .tc-btn {
@@ -1058,19 +1231,29 @@ button {
     border: 3px solid color-mix(in srgb, var(--paper) 80%, transparent);
   }
   #btn-left, #btn-right {
-    width: 74px;
-    height: 74px;
+    width: var(--dial-steer);
+    height: var(--dial-steer);
     border-radius: 50%;
-    font-size: 30px;
+    font-size: calc(var(--dial-steer) * 0.42);
     line-height: 1;
   }
   #btn-left:active, #btn-right:active { background: var(--paper); color: var(--ink); }
+
+  /* right thumb: 加速 anchored in the corner, DRIFT beside it, FIRE above it —
+     an L, so no two dials ever share a pixel however narrow the screen gets */
+  #boost-btn {
+    right: var(--mr);
+    bottom: var(--mb);
+    width: var(--dial-boost);
+    height: var(--dial-boost);
+    font-size: calc(var(--dial-boost) * 0.28);
+  }
   #btn-drift {
     position: fixed;
-    right: var(--m);
-    bottom: calc(var(--m) + 134px);   /* stacked above the 加速 boost dial */
-    width: 84px;
-    height: 84px;
+    right: calc(var(--mr) + var(--dial-boost) + var(--dial-gap));
+    bottom: var(--mb);
+    width: var(--dial-drift);
+    height: var(--dial-drift);
     border-radius: 50%;
     border-color: var(--yellow);
     color: var(--yellow);
@@ -1078,15 +1261,16 @@ button {
     letter-spacing: 0.04em;
     transform: rotate(6deg);
   }
-  #btn-drift .tc-cap { font-size: 17px; }
-  #btn-drift [lang="ja"] { font-family: var(--f-jp); font-size: 9px; font-weight: 700; }
+  #btn-drift .tc-cap { font-size: calc(var(--dial-drift) * 0.25); line-height: 1.05; }
+  #btn-drift [lang="ja"] { font-family: var(--f-jp); font-size: calc(var(--dial-drift) * 0.145); font-weight: 700; }
   #btn-drift:active { background: var(--yellow); color: var(--ink); }
   #btn-fire {
     position: fixed;
-    left: calc(var(--m) + 30px);
-    bottom: calc(var(--m) + 92px);   /* stacked above the steer pair */
-    width: 66px;
-    height: 66px;
+    right: var(--mr);
+    bottom: calc(var(--mb) + var(--dial-boost) + var(--dial-gap));
+    left: auto;
+    width: var(--dial-fire);
+    height: var(--dial-fire);
     border-radius: 50%;
     border-color: var(--shu);
     color: var(--paper);
@@ -1094,12 +1278,131 @@ button {
     letter-spacing: 0.04em;
     transform: rotate(-6deg);
   }
-  #btn-fire .tc-cap { font-size: 15px; }
-  #btn-fire [lang="ja"] { font-family: var(--f-jp); font-size: 9px; font-weight: 700; }
+  #btn-fire .tc-cap { font-size: calc(var(--dial-fire) * 0.26); line-height: 1.05; }
+  #btn-fire [lang="ja"] { font-family: var(--f-jp); font-size: calc(var(--dial-fire) * 0.16); font-weight: 700; }
   #btn-fire:active { background: var(--shu); color: var(--paper); }
-  /* lift the live drift/apex counters clear of the FIRE button's footprint */
-  #drift-live { bottom: calc(var(--m) + 172px); }
-  #apex-live  { bottom: calc(var(--m) + 204px); }
+
+  /* --- HUD out of the thumbs' way --------------------------------------- */
+  /* the live counters ride above the left steer pair, not through it */
+  #drift-live { bottom: calc(var(--mb) + var(--dial-steer) + 14px); }
+  #apex-live  { bottom: calc(var(--mb) + var(--dial-steer) + 42px); }
+  /* combo + fever move to the free channel BETWEEN the two thumb clusters */
+  #combo-stack {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    bottom: calc(var(--pad-h) + 40px);
+    width: min(56vw, 300px);
+  }
+  #fever-band {
+    left: 50%;
+    right: auto;
+    bottom: calc(var(--pad-h) + 8px);
+    transform: translateX(-50%) scaleX(0);
+    transform-origin: center;
+  }
+  #hint { display: none; }   /* it lists keyboard keys — meaningless here */
+
+  /* the top-right stack was three lines of keyboard prompts stretched across
+     half the screen. On touch the gauge and the pips ARE the readout: the
+     buttons that drive them are right there on screen. */
+  #route-ticker, #boost-label, #ammo-label { display: none; }
+  #boost-block { margin-top: 8px; }
+  #boost-gauge { width: min(30vw, 150px); height: 6px; }
+  #ammo-block { margin-top: 6px; }
+  #ammo-pips .pip { width: 7px; height: 12px; }
+  #speed-plate { padding: 7px 11px 6px; gap: 5px; }
+  /* the score has to leave a lane for the chip row that now sits top-centre */
+  #score-digits { font-size: clamp(30px, 9.5vw, 62px); }
+  #score-label { font-size: 9px; letter-spacing: 0.2em; margin-top: 4px; }
+  #speed-unit { font-size: 10px; }
+  #shield-tag { font-size: 10px; margin-top: 5px; }
+  #overdrive-tag { top: calc(100% + 4px); }
+
+  /* banners: keep them off the score / speed plates and let them wrap */
+  #pursuit { top: calc(var(--mt) + 16vh); white-space: normal; max-width: 84vw; }
+  #pursuit-sub { display: none; }
+  #turn-signal { top: calc(var(--mt) + 24vh); }
+  #keep-clear { top: calc(var(--mt) + 30vh); }
+  .distract-card { max-width: 56vw; }
+
+  /* --- settings chips ---------------------------------------------------- */
+  /* Long labels become single glyphs, and while driving only the RIDE chip
+     stays out (it is a gameplay action); MUSIC / SOUND / HOW TO PLAY move to
+     the pause + intro screens where there is room and no traffic incoming. */
+  .ab-l { display: none; }
+  .ab-s { display: inline; }
+  #audio-btns {
+    right: auto;
+    left: 50%;
+    bottom: auto;
+    top: var(--mt);
+    transform: translateX(-50%);
+    z-index: 66;              /* readable over the pause veil (z 65) */
+    gap: 5px;
+    flex-wrap: nowrap;
+    max-width: calc(100vw - var(--ml) - var(--mr));
+  }
+  #mute-btn, #music-btn, #vehicle-btn, #help-btn, #pause-btn {
+    min-width: 36px;
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 10px;
+    font-size: 14px;
+    letter-spacing: 0;
+  }
+  #vehicle-btn .ab-s, #mute-btn .ab-s { font-family: var(--f-jp); font-weight: 700; font-size: 13px; }
+  #pause-btn {
+    color: color-mix(in srgb, var(--paper) 62%, transparent);
+    border: 1px solid color-mix(in srgb, var(--paper) 35%, transparent);
+    letter-spacing: 0.1em;
+  }
+  /* the chips float over the green intro poster, the night road and the pause
+     veil in turn — an ink plate behind each one keeps them legible on all three */
+  #mute-btn, #music-btn, #vehicle-btn, #pause-btn {
+    background: color-mix(in srgb, var(--ink) 66%, transparent);
+  }
+  /* paused: four chips no longer fit beside the score, and there is a whole
+     screen free — drop them under the 中断 card where they read as a menu */
+  body.paused #audio-btns { top: 62%; gap: 8px; }
+  body.paused #mute-btn,
+  body.paused #music-btn,
+  body.paused #vehicle-btn,
+  body.paused #help-btn { min-width: 48px; min-height: 44px; font-size: 16px; }
+  /* driving: RIDE + PAUSE only — everything else waits for the pause screen,
+     where there is room for it and nothing is coming at you. */
+  body.playing #pause-btn { display: flex; }
+  body.playing #music-btn,
+  body.playing #mute-btn,
+  body.playing #help-btn { display: none; }
+  body.paused #music-btn,
+  body.paused #mute-btn,
+  body.paused #help-btn { display: flex; }
+  body.paused #pause-btn { display: none; }   /* tap the veil to resume */
+}
+
+/* landscape phones: ~390px of height total. Shrink the poster margin and the
+   dials, and pull the banners up so they clear the plates without stacking. */
+@media (pointer: coarse) and (max-height: 460px) {
+  :root {
+    --m: 2.4vmin;
+    --dial-steer: clamp(48px, 11vh, 62px);
+    --dial-boost: clamp(48px, 11vh, 62px);
+    --dial-drift: clamp(44px, 10vh, 56px);
+    --dial-fire:  clamp(40px, 9vh, 50px);
+  }
+  #score-digits { font-size: clamp(34px, 9vh, 56px); }
+  #speed-num { font-size: clamp(22px, 6vh, 34px); }
+  #pursuit { top: calc(var(--mt) + 2px); }
+  #turn-signal { top: calc(var(--mt) + 8vh); }
+  #keep-clear { top: 40%; }
+  #combo-stack { bottom: calc(var(--pad-h) + 22px); width: min(40vw, 240px); }
+  #combo-stack .stripe { height: 7px; }
+  #fever-band { bottom: calc(var(--pad-h) + 4px); font-size: 12px; padding: 4px 10px 3px; }
+  #audio-btns { top: 2px; }
+  #drift-live, #apex-live { font-size: 13px; }
 }
 
 /* ============ how-to-play overlay ============ */
@@ -1216,6 +1519,15 @@ button {
 @media (max-width: 560px) {
   .help-cols { grid-template-columns: 1fr; gap: 14px; }
 }
+/* on a touch device the KEYBOARD column is the one that doesn't apply — lead
+   with TOUCH / MOBILE so the first thing a phone player reads is their controls */
+@media (pointer: coarse) {
+  .help-col:nth-child(1) { order: 2; }
+  .help-col:nth-child(2) { order: 1; }
+  #help { padding: 3vmin var(--mr) calc(var(--mb) + 3vmin) var(--ml); }
+  #help-card { max-height: 88vh; width: 100%; box-shadow: 6px 6px 0 var(--shu); }
+  .help-list .k { min-width: 38px; font-size: 11px; }
+}
 
 #nogl[hidden] { display: none; }
 #nogl {
@@ -1231,31 +1543,6 @@ button {
   font-size: clamp(20px, 4vw, 40px);
   line-height: 1.4;
   padding: 10vmin;
-}
-
-/* ============ mobile ============ */
-
-@media (max-width: 720px) {
-  :root { --m: 5vmin; }
-  #title, #title-fill { font-size: min(30vw, 24vh); bottom: 2vh; }
-  #score-digits { font-size: 13vw; }
-  #speed-num { font-size: 7vw; }
-  #combo-stack {
-    left: 50%;
-    transform: translateX(-50%);
-    bottom: calc(var(--m) + 56px);
-    width: 60vw;
-  }
-  #fever-band { left: 50%; transform: translateX(-50%) scaleX(0); transform-origin: center; }
-  #hint { display: none; }
-  #air-trick { top: 26%; font-size: clamp(20px, 6vw, 40px); }
-  #overdrive-tag { font-size: 9px; letter-spacing: 0.12em; }
-  /* keep apex-live at its 150px base so it clears drift-live (118px) by 32px */
-  #results { width: 100vw; }
-  #results-card { border-left: none; border-top: 3px solid var(--paper); }
-  #restart-hint { display: none; }
-  #roundel { display: none; }
-  #mute-btn { bottom: calc(var(--m) * 0.6); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1310,6 +1597,13 @@ button {
   </div>
   <div id="fever-band"><span>ヒヤリハット FEVER — POINTS ×2</span></div>
 
+  <!-- the median / shoulder hatching is a crossing, not a lane: sit on it and
+       the rumble strip scrubs your speed and shoves you back onto a carriageway -->
+  <div id="keep-clear" aria-hidden="true">
+    <span class="kc-jp" lang="ja">キープクリア</span>
+    <span class="kc-en">KEEP CLEAR — CROSS, DON'T CAMP</span>
+  </div>
+
   <div id="pursuit" aria-hidden="true">
     <span id="pursuit-lights"><i class="pl-red"></i><i class="pl-blue"></i></span>
     <span id="pursuit-text" lang="ja">警察 POLICE PURSUIT</span>
@@ -1323,7 +1617,7 @@ button {
   </div>
 
   <div id="stamps"></div>
-  <div id="hint">&#8592;&#8594; STEER &nbsp;&middot;&nbsp; SHIFT — DRIFT &nbsp;&middot;&nbsp; &#8593; — BOOST &nbsp;&middot;&nbsp; F — FIRE &nbsp;&middot;&nbsp; C — RIDE &nbsp;&middot;&nbsp; RAMP → AIR TRICKS &nbsp;&middot;&nbsp; PRESS <b>?</b> / HOW TO PLAY</div>
+  <div id="hint">&#8592;&#8594; STEER &nbsp;&middot;&nbsp; SHIFT — DRIFT &nbsp;&middot;&nbsp; &#8593; — BOOST &nbsp;&middot;&nbsp; F — FIRE &nbsp;&middot;&nbsp; C — RIDE &nbsp;&middot;&nbsp; P — PAUSE</div>
 </div>
 
 <button id="boost-btn" type="button" aria-label="Hold to boost"><span lang="ja">加速</span></button>
@@ -1427,11 +1721,17 @@ button {
   </div>
 </section>
 
+<!-- settings chips. Each carries a long desktop label and a short touch label;
+     the media query below swaps which one is rendered, so a phone gets thumb-
+     sized chips instead of a full sentence of letterspaced caps per button. -->
 <div id="audio-btns">
-  <button id="vehicle-btn" type="button" aria-label="Change vehicle">RIDE&nbsp;—&nbsp;CAR</button>
-  <button id="help-btn" type="button" aria-label="How to play">HOW&nbsp;TO&nbsp;PLAY</button>
-  <button id="music-btn" type="button" aria-label="Toggle music">MUSIC&nbsp;ON</button>
-  <button id="mute-btn" type="button" aria-label="Toggle sound">SOUND&nbsp;ON</button>
+  <button id="vehicle-btn" type="button" aria-label="Change vehicle"><span class="ab-l">RIDE&nbsp;—&nbsp;CAR</span><span class="ab-s" lang="ja">車</span></button>
+  <!-- touch-only: there is no P key on a phone, so pausing had no affordance at
+       all — and pause is where the other settings become reachable mid-run -->
+  <button id="pause-btn" type="button" aria-label="Pause"><span class="ab-s">❙❙</span></button>
+  <button id="help-btn" type="button" aria-label="How to play"><span class="ab-l">HOW&nbsp;TO&nbsp;PLAY</span><span class="ab-s">?</span></button>
+  <button id="music-btn" type="button" aria-label="Toggle music"><span class="ab-l">MUSIC&nbsp;ON</span><span class="ab-s">♪</span></button>
+  <button id="mute-btn" type="button" aria-label="Toggle sound"><span class="ab-l">SOUND&nbsp;ON</span><span class="ab-s" lang="ja">音</span></button>
 </div>
 
 <!-- ============ HOW TO PLAY ============ -->
@@ -1451,7 +1751,7 @@ button {
           <li><span class="k">▲</span><span class="d">Boost (<b>W</b>) — spends the BOOST gauge</span></li>
           <li><span class="k">SHIFT</span><span class="d">Drift — hold while steering (or <b>SPACE</b>)</span></li>
           <li><span class="k">F</span><span class="d">Fire the cannon — clears a car, spends 1 ammo</span></li>
-          <li><span class="k">C</span><span class="d">Change ride — <b>car → bike → bicycle</b> (or the <b>RIDE</b> button). Smaller rides slip tighter gaps.</span></li>
+          <li><span class="k">C</span><span class="d">Change ride — <b>car → bike → bicycle</b> (or the <b>RIDE</b> button). Smaller rides slip tighter gaps, but they top out slower and get pushed wider through corners.</span></li>
           <li><span class="k">P</span><span class="d">Pause · <span class="k2">M</span> mute · <span class="k2">R</span> restart</span></li>
         </ul>
         <h3 class="air">✈ IN THE AIR (after a ramp)</h3>
@@ -1465,10 +1765,11 @@ button {
       <div class="help-col">
         <h3>▤ TOUCH / MOBILE</h3>
         <ul class="help-list">
-          <li><span class="k">◀ ▶</span><span class="d">Bottom-left buttons — steer</span></li>
-          <li><span class="k">加速</span><span class="d">Bottom-right red button — boost</span></li>
-          <li><span class="k">DRIFT</span><span class="d">Hold the DRIFT button while steering</span></li>
-          <li><span class="k">FIRE</span><span class="d">Above the steer buttons — one shot per tap</span></li>
+          <li><span class="k">◀ ▶</span><span class="d">Bottom-<b>left</b> pair — steer</span></li>
+          <li><span class="k">加速</span><span class="d">Bottom-<b>right</b> red dial — boost</span></li>
+          <li><span class="k">DRIFT</span><span class="d">Yellow dial beside 加速 — hold it while steering</span></li>
+          <li><span class="k">FIRE</span><span class="d">Above 加速 — one shot per tap</span></li>
+          <li><span class="k" lang="ja">車</span><span class="d">Top of the screen — change ride. <span class="k2">❙❙</span> pauses, and the pause screen holds <b>?</b> how-to-play, <span class="k2">♪</span> music and <span class="k2" lang="ja">音</span> sound.</span></li>
         </ul>
         <h3 class="air">✈ IN THE AIR (mobile)</h3>
         <ul class="help-list">
@@ -1478,6 +1779,7 @@ button {
         <ul class="help-list">
           <li><span class="d">When <b>TURN LEFT / RIGHT</b> flashes, steer that way — <b>hold DRIFT through the apex</b> for triple ink.</span></li>
           <li><span class="d">Steer left over the yellow line to <b>switch to the other road</b> — the camera rides across with you. Cars there come <b>head-on</b>; shaving one pays <b>×2 ink</b>, a hit is a crash.</span></li>
+          <li><span class="d">The hatched middle is a <b>crossing, not a lane</b> — sit on it and <b>キープクリア KEEP CLEAR</b> flashes, your speed scrubs, the police come, and the rumble strip shoves you back onto a carriageway. Same for the rails: <b>every ride's edge sits inside the outer lane's reach</b>, so hugging the wall is a lane choice, never a hiding place.</span></li>
           <li><span class="d">Yellow <b>補給 crates</b> hold <b>AMMO</b> or a <b>SHIELD</b> — shoot them or drive through. The shield blocks <b>one</b> crash.</span></li>
         </ul>
         <h3 class="air">🚓 警察 POLICE PURSUIT</h3>
@@ -3835,11 +4137,11 @@ window.HIYARI_MUSIC_SRCS = ["data:audio/mpeg;base64,SUQzBAAAAAAAPFRYWFgAAAAPAAAD
   const KMH = 3.4;               // display conversion
   const KM = 0.000944;           // units → km (consistent with KMH)
   const STEER_VMAX = 16;         // lateral units/s at full lock
-  const X_CLAMP = 8.35;          // right wall — your own carriageway edge
+  const X_WALL_R = 8.35;         // hard right wall — the guardrail lip
   // the road is now TWO-WAY: the left wall reaches clear across the divider onto
   // the far carriageway. Cross CENTER_X and you've SWITCHED to the other road —
   // the camera rides across with you and re-centres on it.
-  const X_CLAMP_L = -21.3;       // left wall — just shy of the far barrier
+  const X_WALL_L = -21.3;        // hard left wall — just shy of the far barrier
   const CENTER_X  = -10.5;       // the divider between the two carriageways
   const OTHER_CENTER = -17.15;   // centre of the far road (mean of ONCOMING_X)
   const ONCOMING_HW = 1.05;      // oncoming car half-width  (body 2.1 wide)
@@ -3945,6 +4247,33 @@ window.HIYARI_MUSIC_SRCS = ["data:audio/mpeg;base64,SUQzBAAAAAAAPFRYWFgAAAAPAAAD
   const CH_LUNGE_SPEED  = 24;   // forward dart speed once it commits (fast → brief overlap)
   const CH_LUNGE_TIME   = 0.6;  // how long the committed dart lasts before it peels off
 
+  /* ---------- v8: shoulder-hugging & median camping are no longer free ----------
+     The old walls were FIXED (8.35 / −21.3) while the hitbox is not: a car
+     (halfW 1.02) parked on the rail still overlapped the outer lane, but a bike
+     (0.50) or a bicycle (0.40) sat in a sliver of asphalt no traffic could ever
+     reach — park there and nothing on the road could touch you. Worse, the whole
+     strip between the two carriageways (own edge line −9.1 → far edge line −12.4,
+     plus the un-laned shoulders either side of it) is ~5 units of road with NO
+     traffic on it at all: a free corridor for every ride.
+
+     Two rules fix both, and they're width-aware so every ride plays by the same
+     odds instead of the smallest one winning by default:
+       1. the side walls are pulled in until the outermost lane can always reach
+          you — hugging the rail is a lane position, never a hiding place;
+       2. the un-laned middle (median + both inner shoulders) is a CROSSING, not
+          a lane: you have ~1s to get across before the rumble strip spits you
+          back onto a carriageway, bleeds speed, and calls the police in. */
+  const TRAF_HW_MIN = 0.95;      // narrowest traffic half-width (the kei, w 1.9)
+  const EDGE_BITE   = 0.15;      // how far INSIDE the collision threshold a wall sits
+  const ZONE_GRACE  = 1.0;       // seconds you may spend crossing the un-laned middle
+  const ZONE_RAMP   = 0.55;      // seconds for the eject shove to reach full force
+  const ZONE_PUSH   = 30;        // lateral eject speed, units/s (> STEER_VMAX: it wins)
+  const ZONE_SCRUB  = 0.45;      // top-speed multiplier floor while riding the hatching
+  // per-ride handling — a smaller hitbox has to cost something, or the bicycle is
+  // strictly the best ride. Index matches player.vehicle: 0 car, 1 bike, 2 bicycle.
+  const RIDE_TOP = [1, 0.98, 0.92];   // top-speed multiplier
+  const RIDE_CF  = [1, 1.18, 1.34];   // lighter rides get shoved wider through corners
+
   const fmt = (n) => Math.floor(n).toLocaleString('en-US');
   const store = {
     get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
@@ -4034,6 +4363,29 @@ window.HIYARI_MUSIC_SRCS = ["data:audio/mpeg;base64,SUQzBAAAAAAAPFRYWFgAAAAPAAAD
   let pursuitShown = false;
   let cwSide = 0;   // side the police edge-warning currently points to (-1 left, +1 right, 0 hidden)
 
+  /* v8 systems: ride-aware road limits + the un-laned "keep clear" middle */
+  let xWallR = X_WALL_R, xWallL = X_WALL_L;   // outer walls (ride-width aware)
+  let zoneR = 0, zoneL = 0;                   // inner edges of the un-laned middle
+  let zoneTime = 0, zoneOut = 0;              // dwell timer, 0→1 eject/scrub ramp
+  let keepClearShown = false;
+
+  /* Recomputed on every ride swap. `reach` is how far past a lane centre the
+     collision test still bites (the same 0.88 / 0.9 forgiveness factors the
+     traffic and oncoming checks use), so a wall placed one EDGE_BITE inside it
+     guarantees the outer lane can always reach a parked player — whatever the
+     ride. Never pushed OUTSIDE the physical rails. */
+  function refreshRideLimits() {
+    const reachOwn = (TRAF_HW_MIN + player.halfW) * 0.88 - EDGE_BITE;
+    const reachOnc = (ONCOMING_HW + player.halfW) * 0.90 - EDGE_BITE;
+    xWallR = Math.min(X_WALL_R, LANE_X[LANE_X.length - 1] + reachOwn);
+    xWallL = Math.max(X_WALL_L, world.ONCOMING_X[1] - reachOnc);
+    // the un-laned middle: past the reach of your own left lane, and not yet in
+    // reach of the nearest oncoming lane. Crossable, never campable.
+    zoneR = LANE_X[0] - reachOwn;
+    zoneL = world.ONCOMING_X[0] + reachOnc;
+  }
+
+  refreshRideLimits();
   player.group.position.set(LANE_X[2], 0, 0);
 
   /* ---------- DOM refs ---------- */
@@ -4065,6 +4417,8 @@ window.HIYARI_MUSIC_SRCS = ["data:audio/mpeg;base64,SUQzBAAAAAAAPFRYWFgAAAAPAAAD
     rSling: $('#r-sling'), rApex: $('#r-apex'), rTrick: $('#r-trick'), rOd: $('#r-od'),
     // v7 HUD: police pursuit
     pursuit: $('#pursuit'), chaseWarn: $('#chase-warn'), rChase: $('#r-chase'), distractCards: $('#distract-cards'),
+    // v8 HUD: the un-laned middle you may cross but never camp
+    keepClear: $('#keep-clear'),
   };
 
   /* ---------- score odometer ---------- */
@@ -4747,6 +5101,7 @@ window.HIYARI_MUSIC_SRCS = ["data:audio/mpeg;base64,SUQzBAAAAAAAPFRYWFgAAAAPAAAD
       p.obj.rotation.copy(p.rot);
     }
     wreckPieces.length = 0;
+    refreshRideLimits();   // the ride carries over between runs — so must its band
     player.group.position.set(LANE_X[2], 0, 0);
     player.group.rotation.set(0, 0, 0);
     vx = 0;
@@ -4800,6 +5155,9 @@ window.HIYARI_MUSIC_SRCS = ["data:audio/mpeg;base64,SUQzBAAAAAAAPFRYWFgAAAAPAAAD
     pursuitShown = false;
     if (el.chaseWarn) { gsap.killTweensOf(el.chaseWarn); el.chaseWarn.style.opacity = 0; }
     cwSide = 0;
+    // v8: keep-clear dwell — the middle is a crossing again on every fresh run
+    zoneTime = 0; zoneOut = 0; keepClearShown = false;
+    if (el.keepClear) { gsap.killTweensOf(el.keepClear); el.keepClear.style.opacity = 0; }
     world.clearDistractors();
     clearDistractCards();
     distractTimer = 8;
@@ -5439,10 +5797,19 @@ window.HIYARI_MUSIC_SRCS = ["data:audio/mpeg;base64,SUQzBAAAAAAAPFRYWFgAAAAPAAAD
 
   el.restartBtn.addEventListener('click', restart);
 
+  /* Settings chips carry two labels — a long desktop one and a short touch one.
+     Writing textContent would blow both spans away, so set them individually. */
+  function setChip(btn, long, short) {
+    if (!btn) return;
+    const l = btn.querySelector('.ab-l'), s = btn.querySelector('.ab-s');
+    if (l) l.textContent = long; else btn.textContent = long;
+    if (s && short != null) s.textContent = short;
+  }
+
   /* mute */
   let muted = store.get('hiyari-muted') === '1';
   function syncMuteBtn() {
-    el.muteBtn.textContent = muted ? 'SOUND OFF' : 'SOUND ON';
+    setChip(el.muteBtn, muted ? 'SOUND OFF' : 'SOUND ON', '音');
     el.muteBtn.classList.toggle('muted', muted);
   }
   function toggleMute() {
@@ -5460,7 +5827,7 @@ window.HIYARI_MUSIC_SRCS = ["data:audio/mpeg;base64,SUQzBAAAAAAAPFRYWFgAAAAPAAAD
   let musicOn = store.get('hiyari-music') !== '0';
   audio._musicPref = musicOn;
   function syncMusicBtn() {
-    el.musicBtn.textContent = musicOn ? 'MUSIC ON' : 'MUSIC OFF';
+    setChip(el.musicBtn, musicOn ? 'MUSIC ON' : 'MUSIC OFF', '♪');
     el.musicBtn.classList.toggle('muted', !musicOn);
   }
   syncMusicBtn();
@@ -5477,13 +5844,19 @@ window.HIYARI_MUSIC_SRCS = ["data:audio/mpeg;base64,SUQzBAAAAAAAPFRYWFgAAAAPAAAD
   /* ride swap — car → bike → bicycle, cycled with C or the RIDE button.
      grounded run only, so the crash pieces / hitbox never swap mid-air. */
   const vehicleBtn = document.getElementById('vehicle-btn');
+  const RIDE_JP = { CAR: '車', BIKE: '単車', BICYCLE: '自転車' };
   function syncVehicleBtn() {
-    if (vehicleBtn) vehicleBtn.textContent = 'RIDE — ' + player.vehicleName;
+    setChip(vehicleBtn, 'RIDE — ' + player.vehicleName, RIDE_JP[player.vehicleName] || '車');
   }
   syncVehicleBtn();
   function cycleVehicle() {
     if (state !== 'run' || airborne || paused || helpOpen) return;
     const name = player.setVehicle(player.vehicle + 1);
+    // the road limits are hitbox-derived — a narrower ride gets a narrower band,
+    // so no ride can park somewhere the traffic it shares the road with can't reach
+    refreshRideLimits();
+    const p = player.group.position;
+    p.x = Math.max(xWallL, Math.min(xWallR, p.x));
     syncVehicleBtn();
     audio.uiBlip();
     showStamp(1, { jp: '車両変更', word: name, cls: 't2' }, 0);
@@ -5520,6 +5893,9 @@ window.HIYARI_MUSIC_SRCS = ["data:audio/mpeg;base64,SUQzBAAAAAAAPFRYWFgAAAAPAAAD
   function togglePause() {
     if (state !== 'run') return;
     paused = !paused;
+    // paused is the moment a touch player CAN reach the settings chips — the
+    // coarse layout hides all but RIDE while driving, and shows them again here
+    document.body.classList.toggle('paused', paused);
     el.pause.style.display = paused ? 'flex' : 'none';
     el.pause.setAttribute('aria-hidden', paused ? 'false' : 'true');
     if (paused) gsap.globalTimeline.pause();
@@ -5529,8 +5905,12 @@ window.HIYARI_MUSIC_SRCS = ["data:audio/mpeg;base64,SUQzBAAAAAAAPFRYWFgAAAAPAAAD
   // tap anywhere on the overlay resumes — touch players have no P key
   el.pause.addEventListener('pointerdown', (e) => {
     e.preventDefault();
-    if (paused) togglePause();
+    // the settings chips sit ABOVE the veil now; a tap on one is not a resume
+    if (paused && !(e.target && e.target.closest && e.target.closest('button'))) togglePause();
   });
+  // …and the touch-only chip that gets them INTO pause in the first place
+  const pauseBtn = document.getElementById('pause-btn');
+  if (pauseBtn) pauseBtn.addEventListener('click', () => { audio.resume(); if (!paused) togglePause(); });
   function clearInputs() {
     steerL = false;
     steerR = false;
@@ -5594,9 +5974,11 @@ window.HIYARI_MUSIC_SRCS = ["data:audio/mpeg;base64,SUQzBAAAAAAAPFRYWFgAAAAPAAAD
     const sf = slingTimer / SLING_TIME;
     const slingMult = slingTimer > 0 ? 1 + (SLING_MULT - 1) * sf * (2 - sf) : 1;
 
-    // the speed the systems ASK for…
+    // the speed the systems ASK for… (a smaller ride tops out lower, and the
+    // median hatching scrubs you right down — camping it costs real pace)
     const speedTarget = baseSpeed * (fever ? 1.12 : 1) * (boosting ? 1.42 : 1) *
-            (1 + 0.05 * draftCharge) * slingMult * (overdrive ? OD_SPEED : 1);
+            (1 + 0.05 * draftCharge) * slingMult * (overdrive ? OD_SPEED : 1) *
+            (RIDE_TOP[player.vehicle] || 1) * (1 - (1 - ZONE_SCRUB) * zoneOut);
     // …and the speed the car actually DOES. Asymmetric chase: surges arrive
     // fast (feels responsive) but decay is slow (never the sudden "why am I
     // slowing down" jolt after a pass — the user's exact complaint).
@@ -5682,6 +6064,36 @@ window.HIYARI_MUSIC_SRCS = ["data:audio/mpeg;base64,SUQzBAAAAAAAPFRYWFgAAAAPAAAD
     audio.setDrive(speedNorm, vx / STEER_VMAX, tier, boosting ? 1 : 0);
   }
 
+  /* ---------- the un-laned middle: a crossing, never a lane ----------
+     Between zoneR (past your own left lane's reach) and zoneL (not yet in the
+     oncoming lane's reach) there is no traffic at all — the median hatching and
+     the two shoulders either side of it. Crossing takes ~0.4s at full lock, so
+     ZONE_GRACE never touches a genuine carriageway switch; sit there longer and
+     the rumble strip takes over: it bleeds speed, shoves you back onto whichever
+     road is nearer, and the patrol car that was still minutes away comes now. */
+  function updateKeepClear(dt, p) {
+    const inZone = state === 'run' && !airborne && p.x > zoneL && p.x < zoneR;
+    if (inZone) zoneTime += dt;
+    else zoneTime = Math.max(0, zoneTime - dt * 3);
+
+    zoneOut = Math.max(0, Math.min(1, (zoneTime - ZONE_GRACE) / ZONE_RAMP));
+    if (zoneOut > 0) {
+      // eject toward the nearer carriageway — a shove that out-muscles full lock
+      const dir = (zoneR - p.x) < (p.x - zoneL) ? 1 : -1;
+      p.x += dir * ZONE_PUSH * zoneOut * dt;
+      if (Math.sign(vx) === -dir) vx *= Math.max(0, 1 - 4 * dt);   // fight the throttle-in
+      if (chaserTimer > 1.5) chaserTimer = 1.5;                     // camping the median calls it in
+    }
+    showKeepClear(inZone && zoneTime > ZONE_GRACE * 0.45);
+  }
+
+  function showKeepClear(on) {
+    if (!el.keepClear || on === keepClearShown) return;
+    keepClearShown = on;
+    gsap.killTweensOf(el.keepClear);
+    gsap.to(el.keepClear, { opacity: on ? 1 : 0, duration: on ? 0.18 : 0.3, ease: 'power2.out' });
+  }
+
   function updatePlayer(dt, raw) {
     const steer = (steerR ? 1 : 0) - (steerL ? 1 : 0) || touchSteer;
     const steerSign = Math.sign(steer);
@@ -5705,13 +6117,15 @@ window.HIYARI_MUSIC_SRCS = ["data:audio/mpeg;base64,SUQzBAAAAAAAPFRYWFgAAAAPAAAD
     // authority (26.4) so a committed drift can always hook the line back inside.
     let cf = curveK.v * speed * speed * CF_K;
     cf = Math.max(-CF_MAX, Math.min(CF_MAX, cf));
+    cf *= RIDE_CF[player.vehicle] || 1;         // a lighter ride gets pushed wider
     if (airborne) cf *= CF_AIR;                 // don't shove landings around
     if (apexDrift) cf *= (1 - GRIP_CANCEL);     // drift grip cancels most of the push
     p.x -= cf * dt;                             // BEFORE the clamp: the wall always catches first
 
     p.x += vx * dt;
-    if (p.x > X_CLAMP) { p.x = X_CLAMP; vx = Math.min(0, vx); }
-    if (p.x < X_CLAMP_L) { p.x = X_CLAMP_L; vx = Math.max(0, vx); }
+    updateKeepClear(dt, p);
+    if (p.x > xWallR) { p.x = xWallR; vx = Math.min(0, vx); }
+    if (p.x < xWallL) { p.x = xWallL; vx = Math.max(0, vx); }
 
     if (airborne) {
       // in the air the SAME keys become trick controls — continuous rotation you "fly"
@@ -6213,6 +6627,13 @@ window.HIYARI_MUSIC_SRCS = ["data:audio/mpeg;base64,SUQzBAAAAAAAPFRYWFgAAAAPAAAD
     // touch controls only exist while actually driving — hides them under the
     // intro/crash/results screens (which don't full-screen-cover on wide tablets)
     document.body.classList.toggle('playing', state === 'run' || state === 'starting');
+    // the results poster owns the whole screen on a phone — the settings chips
+    // must get out of its way rather than float over RUN IT BACK
+    document.body.classList.toggle('scored', state === 'crash' || state === 'results');
+    // on the intro poster HOW TO PLAY / MUSIC / SOUND are the only chips that
+    // mean anything — and they were buried under the poster, so a touch player
+    // could never read the controls before their first run
+    document.body.classList.toggle('intro', state === 'intro' || state === 'boot');
     if (paused || helpOpen) { renderer.render(scene, camera); return; }
 
     const dt = raw * ts.v;
@@ -6269,7 +6690,7 @@ window.HIYARI_MUSIC_SRCS = ["data:audio/mpeg;base64,SUQzBAAAAAAAPFRYWFgAAAAPAAAD
     state = 'intro';
     gsap.set(el.results, { y: 0, yPercent: 102 });   // clear the parsed CSS px offset
     if (window.matchMedia && matchMedia('(pointer: coarse)').matches) {
-      $('#start-keys').textContent = 'hold to drive · then use the ◀ ▶ · DRIFT · 加速 buttons · tap HOW TO PLAY';
+      $('#start-keys').textContent = 'hold to drive · ◀ ▶ steer · 加速 boost · DRIFT · FIRE · tap ? for how to play';
     }
     // paint everything that needs type (fonts are ready now)
     player.paintLivery(1, false);
@@ -6304,8 +6725,13 @@ window.HIYARI_MUSIC_SRCS = ["data:audio/mpeg;base64,SUQzBAAAAAAAPFRYWFgAAAAPAAAD
       r.z = -100;
       r.group.visible = true;
     },
-    setVehicle: (i) => player.setVehicle(i),
+    // goes through the same door the C key does, so the ride-width road limits
+    // are always recomputed — never let a test park a bicycle outside its band
+    setVehicle: (i) => { const n = player.setVehicle(i); refreshRideLimits(); syncVehicleBtn(); return n; },
     spawnChaser: () => { chaserTimer = 0; spawnChaser(); },
+    // drop the player on an exact x with no lateral momentum — lets a test park
+    // on the median / the rail without steering into something on the way there
+    park: (x) => { player.group.position.x = Math.max(xWallL, Math.min(xWallR, x)); vx = 0; },
     snap: () => ({
       state,
       vehicle: player.vehicleName,
@@ -6315,6 +6741,13 @@ window.HIYARI_MUSIC_SRCS = ["data:audio/mpeg;base64,SUQzBAAAAAAAPFRYWFgAAAAPAAAD
       nearMisses,
       headOns,
       onOtherRoad,
+      halfW: player.halfW,
+      wallR: Math.round(xWallR * 1000) / 1000,
+      wallL: Math.round(xWallL * 1000) / 1000,
+      zoneR: Math.round(zoneR * 1000) / 1000,
+      zoneL: Math.round(zoneL * 1000) / 1000,
+      zoneTime: Math.round(zoneTime * 100) / 100,
+      zoneOut: Math.round(zoneOut * 100) / 100,
       camShiftX: Math.round(camShiftX * 100) / 100,
       score: Math.floor(score),
       boostMeter: Math.round(boostMeter),
